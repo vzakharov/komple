@@ -2,4 +2,9 @@ Intercepts a certain input and displays an autocomplete suggestion in the curren
 
 Currently a script you have to paste in the dev console; to be converted into an extension later on.
 
-Don’t forget to replace the api endpoint & key with your own in `komple.js` (look for `...` in the code).
+Don’t forget to replace the api endpoint & key with your own in `komple.js`:
+
+```
+const endpoint = '...' // Replace with your own endpoint
+const apiKey = '...' // Replace with your API key.
+```
