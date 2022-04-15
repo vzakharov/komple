@@ -1,7 +1,21 @@
 // Intercepts a certain input and displays an autocomplete suggestion in the currently active element, taking the suggestion from an external API.
 
+// Completion API settings
+
 const endpoint = '...' // Replace with your own endpoint
 const apiKey = '...' // Replace with your API key.
+const promptKey = 'prompt'
+const otherBodyParams = {
+  max_tokens: 50,
+  temperature: 0.6,
+  n: 1,
+  stop: '\n'
+}
+const choicesKey = 'choices'
+const multipleChoices = true
+const resultKey = 'text'
+
+////
 
 let keyCount = 0
 
@@ -56,7 +70,6 @@ async function autocomplete() {
     simulateTextInput('...')
     
     let completion = await getSuggestion(element.textContent.replace('\\\\...', ''))
-    // emulate five backspace presses
     element.textContent = element.textContent.replace('\\\\...', '')
     element.textContent += completion
 
@@ -85,17 +98,6 @@ function simulateTextInput(text) {
 
 
 async function getSuggestion(text) {
-
-    const promptKey = 'prompt'
-    const otherBodyParams = {
-      max_tokens: 50,
-      temperature: 0.6,
-      n: 1,
-      stop: '\n'
-    }
-    const choicesKey = 'choices'
-    const multipleChoices = true
-    const resultKey = 'text'
 
     // Get the suggestion from the external API.
     let json = await(
