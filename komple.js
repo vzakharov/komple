@@ -1,4 +1,4 @@
-// This app intercepts a double space input and displays an autocomplete suggestion in the currently active element, taking the suggestion from an external API.
+// Intercepts a certain input and displays an autocomplete suggestion in the currently active element, taking the suggestion from an external API.
 
 const endpoint = '...' // Replace with your own endpoint
 const apiKey = '...' // Replace with your API key.
