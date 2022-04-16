@@ -26,15 +26,25 @@ let debug = what => {
   return what
 }
 
+let autocompleteTimer = null
+let cancelAutocomplete = null
+
 const autocompleteListener = ({ key }) =>
-  // If it's a backslash, increment the count. If it's a double backslash, autocomplete.
-  key === '\\' ? (
-    ++keyCount > 1 && (
-      keyCount = 0,
-      autocomplete()
-    )
-  ) :
-    keyCount = 0
+  // If it's a space or a punctuation mark, start the autocomplete timer. If anything else, cancel the timer and cancel any autocompletion in progress.
+  key.match(/[\s\.,;:!\?\(\)]/) ?
+    (
+      autocompleteTimer = setTimeout(autocomplete, 500),
+      console.log('Autocomplete timer started'),
+      cancelAutocomplete = false
+    ) : 
+      autocompleteTimer && (
+        console.log('Autocomplete timer canceled'),
+        clearTimeout(autocompleteTimer),
+        autocompleteTimer = null,
+        cancelAutocomplete = true
+        // Remove element with id 'komple-thinking'
+        // document.getElementById('komple-thinking')?.remove()
+      )
 
 const configureListener = ({ key, altKey }) => {
   if ( key === 'k' && altKey ) {
@@ -70,7 +80,7 @@ function disable() {
 // Recursively go through children of an element to the deepest child whose textContent ends with a double backslash.
 function deepestMatchingChild(element) {
 
-  if ( element.textContent.includes('\\') ) {
+  if ( element.textContent/*.includes('\\')*/ ) {
     // Scan children. If none, return the element.
     if ( !element.children.length )
       return element
@@ -87,13 +97,26 @@ function deepestMatchingChild(element) {
 
 async function autocomplete() {
 
+  console.log('Autocomplete started')
+
+  // // Display a thinking emoji under the active element (absolute positioning)
+  // let thinking = document.createElement('div')
+  // thinking.id = 'komple-thinking'
+  // thinking.style.position = 'absolute'
+  // thinking.style.top = `${document.activeElement.getBoundingClientRect().top}px`
+  // thinking.style.left = `${document.activeElement.getBoundingClientRect().left}px`
+  // thinking.innerText = '🤔'
+  // document.body.appendChild(thinking)
+
   // Get the deepest matching child.
   let element = deepestMatchingChild(document.activeElement)
 
+  console.log('Deepest matching child:', element)
+
   if ( element ) {
 
-    let initialCaretPosition = element.textContent.length - 2
-    simulateTextInput('...')
+    let initialCaretPosition = element.textContent.length
+    // simulateTextInput('...')
     
     let prompt =
       // Are we on twitter.com?
@@ -102,11 +125,21 @@ async function autocomplete() {
     
     !prompt && ( prompt = element.textContent )
     
-    let completion = await getSuggestion(prompt.replace('\\\\...', ''))
-    // element.textContent = element.textContent.replace('\\\\...', '')
-    simulateTextInput(completion)
+    console.log(prompt)
+    
+    let completion = await getSuggestion(prompt.replace(/\s+$/, ''))
+    
+    // If prompt ends with a space, remove the leading space from the completion
+    prompt.match(/\s+$/) && ( completion = completion.replace(/^\s+/, '') )
 
-    setCaretPosition(element, initialCaretPosition)
+    console.log(completion)
+
+    if ( !cancelAutocomplete ) {
+      console.log('Autocomplete completed')
+      simulateTextInput(completion)
+      setCaretPosition(element, initialCaretPosition)
+      // thinking.remove()
+    }
 
   }
 
