@@ -27,21 +27,24 @@ let debug = what => {
 }
 
 let autocompleteTimer = null
-let cancelAutocomplete = null
+let runningAutocompletes = []
 
 const autocompleteListener = ({ key }) =>
-  // If it's a space or a punctuation mark, start the autocomplete timer. If anything else, cancel the timer and cancel any autocompletion in progress.
-  key.match(/[\s\.,;:!\?\(\)]/) ?
+  // If it's a space or an opening bracket, parenthesis, etc., start the autocomplete timer. If anything else, cancel the timer and cancel any autocompletion in progress.
+  key.match(/^[\[\(\{\s]$/) ?
     (
-      autocompleteTimer = setTimeout(autocomplete, 500),
-      console.log('Autocomplete timer started'),
+      runningAutocompletes.push(Math.random().toString(36).substring(2, 15)),
+      autocompleteTimer = setTimeout(
+        () => autocomplete(runningAutocompletes[runningAutocompletes.length - 1]),
+      500),
+      console.log('Autocomplete timer started, id = ' + runningAutocompletes[runningAutocompletes.length - 1]),
       cancelAutocomplete = false
     ) : 
       autocompleteTimer && (
         console.log('Autocomplete timer canceled'),
         clearTimeout(autocompleteTimer),
         autocompleteTimer = null,
-        cancelAutocomplete = true
+        runningAutocompletes = []
         // Remove element with id 'komple-thinking'
         // document.getElementById('komple-thinking')?.remove()
       )
@@ -95,9 +98,9 @@ function deepestMatchingChild(element) {
     
 }
 
-async function autocomplete() {
+async function autocomplete(id) {
 
-  console.log('Autocomplete started')
+  console.log('Autocomplete started, id = ' + id)
 
   // // Display a thinking emoji under the active element (absolute positioning)
   // let thinking = document.createElement('div')
@@ -129,13 +132,13 @@ async function autocomplete() {
     
     let completion = await getSuggestion(prompt.replace(/\s+$/, ''))
     
-    // If prompt ends with a space, remove the leading space from the completion
-    prompt.match(/\s+$/) && ( completion = completion.replace(/^\s+/, '') )
 
-    console.log(completion)
+    if ( runningAutocompletes.includes(id) ) {
+      // If prompt ends with a space, remove the leading space from the completion
+      prompt.match(/\s+$/) && ( completion = completion.replace(/^\s+/, '') )
 
-    if ( !cancelAutocomplete ) {
-      console.log('Autocomplete completed')
+      console.log('Completion:', completion)
+
       simulateTextInput(completion)
       setCaretPosition(element, initialCaretPosition)
       // thinking.remove()
