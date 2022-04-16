@@ -29,16 +29,18 @@ let debug = what => {
 let autocompleteTimer = null
 let runningAutocompletes = []
 
-const autocompleteListener = ({ key }) =>
-  // If it's a space or an opening bracket, parenthesis, etc., start the autocomplete timer. If anything else, cancel the timer and cancel any autocompletion in progress.
-  key.match(/^[\[\(\{\s“]$/) ?
-    (
-      runningAutocompletes.push(Math.random().toString(36).substring(2, 15)),
-      autocompleteTimer = setTimeout(
-        () => autocomplete(runningAutocompletes[runningAutocompletes.length - 1]),
-      500),
-      console.log('Autocomplete timer started, id = ' + runningAutocompletes[runningAutocompletes.length - 1])
-    ) : cancelAutocomplete()
+const autocompleteListener = ({ key, ctrlKey }) => {
+  // If it's a space or an opening bracket, parenthesis, etc., start the autocomplete timer. If anything else, cancel the timer and cancel any autocompletion in progress. If it's ctrl+space, start the autocomplete right away.
+  key === ' ' && ctrlKey ? 
+    autocomplete() 
+    : key.match(/^[\[\(\{\s“]$/) ?
+      (
+        autocompleteTimer = setTimeout(
+          () => autocomplete(),
+        500),
+        console.log('Autocomplete timer started')
+      ) : !ctrlKey && cancelAutocomplete()
+}
 
 function cancelAutocomplete() {
 
@@ -46,9 +48,9 @@ function cancelAutocomplete() {
     console.log('Autocomplete timer canceled'),
     clearTimeout(autocompleteTimer),
     autocompleteTimer = null,
-    runningAutocompletes = []
+    runningAutocompletes = [],
     // Remove element with id 'komple-thinking'
-    // document.getElementById('komple-thinking')?.remove()
+    document.getElementById('komple-thinking')?.remove()
   )
 
 }
@@ -104,37 +106,65 @@ function deepestMatchingChild(element) {
     
 }
 
-async function autocomplete(id) {
+async function autocomplete() {
 
+  // Assign a random id to this autocomplete
+  let id = Math.random().toString(36).substring(2, 15)
+  runningAutocompletes.push(id)
   console.log('Autocomplete started, id = ' + id)
 
-  // // Display a thinking emoji under the active element (absolute positioning)
-  // let thinking = document.createElement('div')
-  // thinking.id = 'komple-thinking'
-  // thinking.style.position = 'absolute'
-  // thinking.style.top = `${document.activeElement.getBoundingClientRect().top}px`
-  // thinking.style.left = `${document.activeElement.getBoundingClientRect().left}px`
-  // thinking.innerText = '🤔'
-  // document.body.appendChild(thinking)
+  // Display a thinking robot emoji under the caret
+  let thinking = document.createElement('div')
+  thinking.id = 'komple-thinking'
+  thinking.innerText = '🤖🤔'
+  thinking.style.position = 'fixed'
+  // Make it slightly transparent
+  thinking.style.color = 'rgba(0,0,0,0.7)'
 
-  // Get the deepest matching child.
-  let element = deepestMatchingChild(document.activeElement)
+  let { bottom, left } = document.getSelection().getRangeAt(0).startContainer.parentElement.getBoundingClientRect()
 
-  console.log('Deepest matching child:', element)
+  thinking.style.top = bottom + 'px'
+  thinking.style.left = left + 'px'
+  // Place on top of all other elements
+  thinking.style.zIndex = '9999'
+  document.body.appendChild(thinking)
+
+  // Add another thinking emoji to the end of the thinking element every second
+  let thinkingInterval = setInterval(() => {
+    document.getElementById('komple-thinking') ?
+      thinking.innerText += '🤔'
+      : clearInterval(thinkingInterval)
+  }, 1000)
+
+  // // Get the deepest matching child.
+  // let element = deepestMatchingChild(document.activeElement)
+  let element = document.activeElement
+
+  console.log('Enclosing element:', element)
 
   if ( element ) {
 
     let initialCaretPosition = element.textContent.length
     // simulateTextInput('...')
     
-    let prompt =
-      // Are we on twitter.com?
-      document.location.hostname === 'twitter.com' &&
-        getTwitterPrompt(element)
+    // let prompt =
+    //   // Are we on twitter.com?
+    //   document.location.hostname === 'twitter.com' ?
+    //     getTwitterPrompt(element) :
+    //     // Are we on notion.so?
+    //       document.location.hostname === 'notion.so' &&
+    //         getNotionPrompt()
     
-    !prompt && ( prompt = element.textContent )
-    
-    console.log(prompt)
+
+
+    let prompt = {
+      'twitter.com': getTwitterPrompt,
+      'notion.so': getNotionPrompt
+    }[
+      document.location.hostname.replace(/^(www\.)?/, '')
+    ]?.() || element.innerText    
+
+    console.log('Prompt:', prompt)
     
     let completion = await getSuggestion(prompt.replace(/\s+$/, ''))
     
@@ -146,8 +176,8 @@ async function autocomplete(id) {
       console.log('Completion:', completion)
 
       simulateTextInput(completion)
-      setCaretPosition(element, initialCaretPosition)
-      // thinking.remove()
+      // setCaretPosition(element, initialCaretPosition)
+      thinking.remove()
     }
 
   }
@@ -189,9 +219,25 @@ function getTwitterPrompt() {
     // Add my handle to the end of the list, plus any existing content of the active element
     output += `${myHandle}:\n${document.activeElement.textContent}`
 
-    console.log(output)
-
     return output
+  } catch (e) {
+    console.log(e)
+  }
+
+}
+
+function getNotionPrompt() {
+
+  try {
+
+    // Remove 'Add icon\nAdd cover\nAdd comment\n' from the beginning of the active element's innerText
+    let prompt = document.activeElement.innerText.replace(/^Add icon\nAdd cover\nAdd comment\n/, '')
+
+    // Replace newlines with double newlines
+    prompt = prompt.replace(/\n/g, '\n\n')
+
+    return prompt    
+
   } catch (e) {
     console.log(e)
   }
