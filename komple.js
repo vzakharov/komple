@@ -115,7 +115,6 @@ async function autocomplete() {
 function getTwitterPrompt() {
 
   try {
-    debugger
     // function to extract Twitter handle from href
     const getHandle = href => href.replace(/^.*?(\w+)$/, '@$1')
 
