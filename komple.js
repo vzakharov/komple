@@ -31,23 +31,27 @@ let runningAutocompletes = []
 
 const autocompleteListener = ({ key }) =>
   // If it's a space or an opening bracket, parenthesis, etc., start the autocomplete timer. If anything else, cancel the timer and cancel any autocompletion in progress.
-  key.match(/^[\[\(\{\s]$/) ?
+  key.match(/^[\[\(\{\s“]$/) ?
     (
       runningAutocompletes.push(Math.random().toString(36).substring(2, 15)),
       autocompleteTimer = setTimeout(
         () => autocomplete(runningAutocompletes[runningAutocompletes.length - 1]),
       500),
-      console.log('Autocomplete timer started, id = ' + runningAutocompletes[runningAutocompletes.length - 1]),
-      cancelAutocomplete = false
-    ) : 
-      autocompleteTimer && (
-        console.log('Autocomplete timer canceled'),
-        clearTimeout(autocompleteTimer),
-        autocompleteTimer = null,
-        runningAutocompletes = []
-        // Remove element with id 'komple-thinking'
-        // document.getElementById('komple-thinking')?.remove()
-      )
+      console.log('Autocomplete timer started, id = ' + runningAutocompletes[runningAutocompletes.length - 1])
+    ) : cancelAutocomplete()
+
+function cancelAutocomplete() {
+
+  autocompleteTimer && (
+    console.log('Autocomplete timer canceled'),
+    clearTimeout(autocompleteTimer),
+    autocompleteTimer = null,
+    runningAutocompletes = []
+    // Remove element with id 'komple-thinking'
+    // document.getElementById('komple-thinking')?.remove()
+  )
+
+}
 
 const configureListener = ({ key, altKey }) => {
   if ( key === 'k' && altKey ) {
@@ -61,6 +65,8 @@ function enable() {
 
   document.addEventListener('keyup', autocompleteListener)
   document.addEventListener('keydown', configureListener)
+  // cancel autocomplete on mouse click
+  document.addEventListener('click', cancelAutocomplete)
 
   // Load api config from chrome storage
   chrome.storage.sync.get('api', data => {
