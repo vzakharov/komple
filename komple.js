@@ -100,7 +100,7 @@ async function autocomplete() {
       document.location.hostname === 'twitter.com' &&
         getTwitterPrompt(element)
     
-    !prompt && prompt = element.textContent
+    !prompt && ( prompt = element.textContent )
     
     let completion = await getSuggestion(prompt.replace('\\\\...', ''))
     // element.textContent = element.textContent.replace('\\\\...', '')
@@ -115,6 +115,7 @@ async function autocomplete() {
 function getTwitterPrompt() {
 
   try {
+    debugger
     // function to extract Twitter handle from href
     const getHandle = href => href.replace(/^.*?(\w+)$/, '@$1')
 
