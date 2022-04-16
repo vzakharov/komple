@@ -4,7 +4,7 @@
 
 const api = {
   endpoint: '',
-  apiKey: '',
+  auth: '',
   censor: false,
   promptKey: 'prompt',
   otherBodyParams: {
@@ -173,6 +173,9 @@ async function autocomplete() {
       // If prompt ends with a space, remove the leading space from the completion
       prompt.match(/\s+$/) && ( completion = completion.replace(/^\s+/, '') )
 
+      // Remove everything after and including the first newline
+      completion = completion.replace(/\n.*/g, '')
+
       console.log('Completion:', completion)
 
       simulateTextInput(completion)
@@ -265,7 +268,7 @@ function simulateTextInput(text) {
 async function getSuggestion(text) {
 
     let {
-      endpoint, apiKey, promptKey, otherBodyParams, arrayKey, resultKey
+      endpoint, auth, promptKey, otherBodyParams, arrayKey, resultKey
     } = api
 
     // Get the suggestion from the external API.
@@ -276,7 +279,7 @@ async function getSuggestion(text) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
+            'Authorization': `${auth}`
           },
           body: JSON.stringify({
             [promptKey]: text,
@@ -344,7 +347,7 @@ function createConfigModal() {
 
     !multiline && (
       input.type = 
-        ['endpoint', 'apiKey'].includes(key) ?
+        ['endpoint', 'auth'].includes(key) ?
           api.censor ? 'password' : 'text'
           : ['promptKey', 'arrayKey', 'resultKey'].includes(key) ?
             'text' :
@@ -362,7 +365,7 @@ function createConfigModal() {
     let labelTd = document.createElement('td')
     labelTd.textContent = {
       endpoint: 'Endpoint',
-      apiKey: 'API Key',
+      auth: 'Authorization header',
       promptKey: 'Prompt key',
       arrayKey: 'Array key',
       resultKey: 'Result key',
@@ -379,7 +382,15 @@ function createConfigModal() {
       // Add a note under the array key input.
       let note = document.createElement('div')
       note.style.cssText = 'font-size: 0.8em; color: #888; margin-bottom: 5px;'
-      note.textContent = 'Empty no array returned'
+      note.textContent = 'Leave empty if no array returned.'
+      inputTd.appendChild(note)
+    }
+
+    if ( key === 'auth' ) {
+      // Add a note that it should include "Bearer", not just the API key.
+      let note = document.createElement('div')
+      note.style.cssText = 'font-size: 0.8em; color: #888; margin-bottom: 5px;'
+      note.textContent = 'Include "Bearer", if applicable.'
       inputTd.appendChild(note)
     }
 
@@ -398,7 +409,7 @@ function createConfigModal() {
       }
 
       key === 'censor' && (
-        ['endpoint', 'apiKey'].forEach(key => {
+        ['endpoint', 'auth'].forEach(key => {
           inputs[key].type = input.checked ? 'password' : 'text'
         })
       )
