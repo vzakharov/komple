@@ -1,0 +1,19 @@
+{
+  "name": "Komple",
+  "description": "Autocomplete with large language models on (almost) any web page",
+  "version": "0.1",
+  "permissions": [
+      "tabs","<all_urls>","webRequest","storage"
+  ],
+  "content_scripts": [
+      {
+      "matches": [
+          "http://*/*",
+          "https://*/*"
+          ],
+      "js": ["komple.js"],
+      "run_at": "document_end"
+      }
+  ], 
+  "manifest_version": 2
+}

@@ -1,10 +1,7 @@
-Intercepts a certain input and displays an autocomplete suggestion in the currently active element, taking the suggestion from an external API.
+Chrome extension that displays an autocomplete suggestion in the currently active element, taking the suggestion from an external API.
 
-Currently a script you have to paste in the dev console; to be converted into an extension later on.
+- Load unpacked (for now)
+- Press `Alt+K` to configure endpoint & api key (and other settings if you want)
+- While typing, type in two backslahes to get the autocomplete suggestion
 
-Don’t forget to replace the api endpoint & key with your own in `komple.js`:
-
-```
-const endpoint = '...' // Replace with your own endpoint
-const apiKey = '...' // Replace with your API key.
-```
+It’s work in progress, so don’t expect it to work perfectly.
