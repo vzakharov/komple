@@ -38,13 +38,8 @@ const autocompleteListener = ({ key }) =>
 
 const configureListener = ({ key, altKey }) => {
   if ( key === 'k' && altKey ) {
-    let configModal = document.getElementById('komple-config')
-    if ( configModal ) {
-      let { style } = configModal
-      style.display = style.display === 'none' ? 'block' : 'none'
-    } else {
-      configureApi()
-    }
+    let configModal = document.getElementById('komple-config') || createConfigModal()
+    configModal.style.display = configModal.style.display === 'none' ? 'block' : 'none'
   }
 }
 
@@ -100,12 +95,63 @@ async function autocomplete() {
     let initialCaretPosition = element.textContent.length - 2
     simulateTextInput('...')
     
-    let completion = await getSuggestion(element.textContent.replace('\\\\...', ''))
-    element.textContent = element.textContent.replace('\\\\...', '')
-    element.textContent += completion
+    let prompt =
+      // Are we on twitter.com?
+      document.location.hostname === 'twitter.com' &&
+        getTwitterPrompt(element)
+    
+    !prompt && prompt = element.textContent
+    
+    let completion = await getSuggestion(prompt.replace('\\\\...', ''))
+    // element.textContent = element.textContent.replace('\\\\...', '')
+    simulateTextInput(completion)
 
     setCaretPosition(element, initialCaretPosition)
 
+  }
+
+}
+
+function getTwitterPrompt() {
+
+  try {
+    // function to extract Twitter handle from href
+    const getHandle = href => href.replace(/^.*?(\w+)$/, '@$1')
+
+    // Find element with aria-label "Profile" and extract the Twitter handle from its href
+    let myHandle = getHandle( document.querySelector('[aria-label="Profile"]').href )
+
+    // Find element with aria-label of Timeline: Conversation
+    let conversation = document.querySelector('[aria-label="Timeline: Conversation"]')
+
+    let output = ''
+
+    // Scan through all its decendants, adding items if it's an <article> element
+    for ( let element of conversation.querySelectorAll('*') ) {
+
+      // If it's the current active element, exit the loop
+      if ( element === document.activeElement )
+        break
+
+      // If it's an <article> element, add it to the list of messages
+      if ( element.tagName === 'ARTICLE' ) {
+        let handle = getHandle( element.querySelector('a[role="link"]').href )
+        let content = element.querySelector('[lang]').textContent
+
+        output += `${handle}:\n${content}\n\n`
+      
+      }
+
+    }
+
+    // Add my handle to the end of the list, plus any existing content of the active element
+    output += `${myHandle}:\n${document.activeElement.textContent}`
+
+    console.log(output)
+
+    return output
+  } catch (e) {
+    console.log(e)
   }
 
 }
@@ -157,11 +203,11 @@ async function getSuggestion(text) {
       : json[resultKey]
 }
 
-function configureApi() {
+function createConfigModal() {
   // Creates and displays a modal dialog to configure the completion API.
   let modalBackground = document.createElement('div')
   modalBackground.id = 'komple-config'
-  modalBackground.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 9999;'
+  modalBackground.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 9999; display: none;'
 
   // Clicking on the background sets display to none.
   modalBackground.addEventListener('click', ({ target }) => {
@@ -245,7 +291,7 @@ function configureApi() {
       // Add a note under the array key input.
       let note = document.createElement('div')
       note.style.cssText = 'font-size: 0.8em; color: #888; margin-bottom: 5px;'
-      note.textContent = 'Leave empty if your endpoint does not return an array.'
+      note.textContent = 'Empty no array returned'
       inputTd.appendChild(note)
     }
 
@@ -276,7 +322,7 @@ function configureApi() {
     })
 
     inputs[key] = input
-    
+
   }
 
   let modalFooter = document.createElement('div')
@@ -293,6 +339,7 @@ function configureApi() {
 
   document.body.appendChild(modalBackground)
 
+  return modalBackground
 }
 
 komple = {
