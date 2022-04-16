@@ -1,25 +1,29 @@
 // Komple: A chrome extension that displays an autocomplete suggestion in the currently active element, taking the suggestion from an external API.
 
-// Completion API settings
+// Extension settings
 
-const api = {
-  endpoint: '',
-  auth: '',
-  censor: false,
-  promptKey: 'prompt',
-  otherBodyParams: {
-    max_tokens: 50,
-    temperature: 0.6,
-    n: 1,
-    stop: '\n'
-  },
-  arrayKey: 'choices',
-  resultKey: 'text'    
+const settings = {
+  apis: [{
+    name: 'default',
+    endpoint: '',
+    auth: '',
+    censor: false,
+    promptKey: 'prompt',
+    otherBodyParams: {
+      max_tokens: 50,
+      temperature: 0.6,
+      n: 1,
+      stop: '\n'
+    },
+    arrayKey: 'choices',
+    resultKey: 'text'    
+  }],
+  currentApiName: 'default',
 }
 
-////
-
-let keyCount = 0
+Object.defineProperty(settings, 'api', {
+  get: () => settings.apis.find(api => api.name === settings.currentApiName) || settings.apis[0]
+})
 
 let debug = what => {
   console.log(what)
@@ -70,14 +74,14 @@ function enable() {
   // cancel autocomplete on mouse click
   document.addEventListener('click', cancelAutocomplete)
 
-  // Load api config from chrome storage
-  chrome.storage.sync.get('api', data => {
-    console.log('Loaded api config from chrome storage', data.api)
-    for ( let key in api ) {
-      api[key] = data.api[key]
-    }
+  // Load extension config from chrome storage
+  chrome.storage.sync.get('settings', data => {
+    console.log('Loaded config from chrome storage:', data.settings)
+    if ( data.settings )
+      for ( let key in settings )
+        settings[key] = data.settings[key]
+    console.log('Loaded settings:', settings)
   })
-
 
 }
 
@@ -264,12 +268,11 @@ function simulateTextInput(text) {
 
 }
 
-
 async function getSuggestion(text) {
 
     let {
       endpoint, auth, promptKey, otherBodyParams, arrayKey, resultKey
-    } = api
+    } = settings.api
 
     // Get the suggestion from the external API.
     let json = await(
@@ -294,6 +297,13 @@ async function getSuggestion(text) {
       : json[resultKey]
 }
 
+function saveSettings() {
+  // Save to chrome storage
+  chrome.storage.sync.set({ settings }, () => {
+    console.log('Saved config to chrome storage:', settings)
+  })
+}
+
 function createConfigModal() {
   // Creates and displays a modal dialog to configure the completion API.
   let modalBackground = document.createElement('div')
@@ -308,7 +318,7 @@ function createConfigModal() {
 
   let modal = document.createElement('div')
   // Center-align the modal vertically and horizontally.
-  modal.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; border-radius: 10px; z-index: 100000; padding: 20px;'
+  modal.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; border-radius: 10px; z-index: 100000; padding: 20px; font-family: sans-serif;'
   modalBackground.appendChild(modal)
 
   
@@ -328,121 +338,213 @@ function createConfigModal() {
   modalBody.classList.add('komple-config-body')
   modalContent.appendChild(modalBody)
 
-  let inputsTable = document.createElement('table')
-  inputsTable.classList.add('komple-config-inputs')
-  modalBody.appendChild(inputsTable)
 
+  // Create a dropdown to select the api in settings.apis
+  let endpointSelect = document.createElement('select')
+  endpointSelect.id = 'komple-select-api'
+  endpointSelect.style.cssText = 'width: 100%;'
+  modalBody.appendChild(endpointSelect)
+  
+  function createOptions() {
+    // Delete any existing options
+    endpointSelect.innerHTML = ''
 
-  let inputs = {}
-  for ( let key in api ) {
-
-    let multiline = ['otherBodyParams'].includes(key)
-
-    let input = document.createElement(
-      multiline ? 'textarea' : 'input'
-    )
-
-    // If text area, set number of rows to the number of lines in the value.
-    multiline && ( input.rows = JSON.stringify(api[key], null, 2).split('\n').length )
-
-    !multiline && (
-      input.type = 
-        ['endpoint', 'auth'].includes(key) ?
-          api.censor ? 'password' : 'text'
-          : ['promptKey', 'arrayKey', 'resultKey'].includes(key) ?
-            'text' :
-                ['censor'].includes(key) ?
-                  'checkbox' :
-                  'number'
-    )
-
-    let valueKey = input.type === 'checkbox' ? 'checked' : 'value'
-    input[valueKey] = key === 'otherBodyParams' ? JSON.stringify(api[key], null, 2) : api[key]
-
-    let tr = document.createElement('tr')
-    inputsTable.appendChild(tr)
-
-    let labelTd = document.createElement('td')
-    labelTd.textContent = {
-      endpoint: 'Endpoint',
-      auth: 'Authorization header',
-      promptKey: 'Prompt key',
-      arrayKey: 'Array key',
-      resultKey: 'Result key',
-      otherBodyParams: 'Other body params',
-      censor: 'Censor endpoint \& key'
-    }[key]
-
-    let inputTd = document.createElement('td')
-    inputTd.appendChild(input)
-
-    tr.appendChild(labelTd)
-    tr.appendChild(inputTd)
-    if ( key === 'arrayKey' ) {
-      // Add a note under the array key input.
-      let note = document.createElement('div')
-      note.style.cssText = 'font-size: 0.8em; color: #888; margin-bottom: 5px;'
-      note.textContent = 'Leave empty if no array returned.'
-      inputTd.appendChild(note)
+    for ( let api of settings.apis ) {
+      let option = document.createElement('option')
+      option.id = `komple-option-${api.name}`
+      option.textContent = api.name
+      option.selected = api == settings.api
+      endpointSelect.appendChild(option)
     }
-
-    if ( key === 'auth' ) {
-      // Add a note that it should include "Bearer", not just the API key.
-      let note = document.createElement('div')
-      note.style.cssText = 'font-size: 0.8em; color: #888; margin-bottom: 5px;'
-      note.textContent = 'Include "Bearer", if applicable.'
-      inputTd.appendChild(note)
-    }
-
-
-    input.addEventListener('change', () => {
-      if ( ['otherBodyParams'].includes(key) ) {
-        try {
-          api[key] = JSON.parse(input.value)
-        } catch (e) {
-          alert('Invalid JSON; reverting to previous value.')
-          input.value = JSON.stringify(api[key], null, 2)
-          return
-        }
-      } else {
-        api[key] = input[valueKey]
-      }
-
-      key === 'censor' && (
-        ['endpoint', 'auth'].forEach(key => {
-          inputs[key].type = input.checked ? 'password' : 'text'
-        })
-      )
-
-      // Save to chrome storage
-      chrome.storage.sync.set({ api }, () => {
-        console.log('Saved API config to chrome storage:', api)
-      })
-    })
-
-    inputs[key] = input
 
   }
+
+  createOptions()
+
+
+  // If the user changes the selected API, update the settings.currentApiName and rerun the createInputs function.
+  endpointSelect.addEventListener('change', ({ target }) => {
+    settings.currentApiName = target.options[target.selectedIndex].textContent
+    createInputs()
+  })
+
+  // Add an empty span to anchor the inputs to.
+  let inputsAnchor = document.createElement('span')
+  modalBody.appendChild(inputsAnchor)
+
+  function createInputs() {
+    // First, delete the inputs table if it exists.
+    document.getElementById('komple-inputs-table')?.remove()
+
+    let inputsTable = document.createElement('table')
+    inputsTable.id = 'komple-inputs-table'
+
+    // Append the table to the anchor
+    inputsAnchor.appendChild(inputsTable)
+
+    let inputs = {}
+    let { api } = settings
+    for ( let key of [
+      'name', 'endpoint', 'auth', 'censor', 'promptKey', 'otherBodyParams', 'arrayKey', 'resultKey'
+    ] ) {
+
+      let multiline = ['otherBodyParams'].includes(key)
+
+      let input = document.createElement(
+        multiline ? 'textarea' : 'input'
+      )
+
+      // If text area, set number of rows to the number of lines in the value.
+      multiline && ( input.rows = JSON.stringify(api[key], null, 2).split('\n').length )
+
+      !multiline && (
+        input.type = 
+          ['endpoint', 'auth'].includes(key) ?
+            api.censor ? 'password' : 'text'
+            : ['censor'].includes(key) ?
+              'checkbox'
+              : 'text'
+      )
+
+      let valueKey = input.type === 'checkbox' ? 'checked' : 'value'
+      input[valueKey] = key === 'otherBodyParams' ? JSON.stringify(api[key], null, 2) : api[key]
+
+      let tr = document.createElement('tr')
+      inputsTable.appendChild(tr)
+
+      let labelTd = document.createElement('td')
+      labelTd.textContent = {
+        name: 'Name',
+        endpoint: 'Endpoint',
+        auth: 'Authorization header',
+        promptKey: 'Prompt key',
+        arrayKey: 'Array key',
+        resultKey: 'Result key',
+        otherBodyParams: 'Other body params',
+        censor: 'Censor endpoint \& key'
+      }[key]
+
+      let inputTd = document.createElement('td')
+      inputTd.appendChild(input)
+
+      tr.appendChild(labelTd)
+      tr.appendChild(inputTd)
+
+      let notes = {
+        name: 'Any name you want to use for this API.',
+        arrayKey: 'Leave empty if no array returned.',
+        auth: 'Include "Bearer", if applicable.',
+      }
+
+      for ( let noteKey in notes )
+        if ( noteKey === key ) {
+          let note = document.createElement('div')
+          note.style.cssText = 'font-size: 0.8em; color: #888; margin-bottom: 5px;'
+          note.textContent = notes[noteKey]
+          labelTd.appendChild(note)
+        }
+
+      input.addEventListener('change', () => {
+        if ( ['otherBodyParams'].includes(key) ) {
+          try {
+            api[key] = JSON.parse(input.value)
+          } catch (e) {
+            alert('Invalid JSON; reverting to previous value.')
+            input.value = JSON.stringify(api[key], null, 2)
+            return
+          } 
+        } else {
+
+          key === 'censor' && (
+            ['endpoint', 'auth'].forEach(key => {
+              inputs[key].type = input.checked ? 'password' : 'text'
+            })
+          )
+  
+          if ( key === 'name' ) {
+  
+            // Convert to lowercase and replace any non-alphanumeric characters with a dash. Update the input.
+            input.value = input.value.toLowerCase().replace(/[^a-z0-9]+/gi, '-')
+  
+            if ( api !== settings.api ) {
+              if ( settings.apis.find(({ name }) => name === input.value) ) {
+                alert('Name already taken; reverting to previous value.')
+                input.value = api.name
+                return
+              }
+            } else {
+              settings.currentApiName = input.value
+            }
+  
+            // Change the respective option in the dropdown.
+            let option = document.getElementById(`komple-option-${api.name}`)
+            option.textContent = input.value
+            option.id = `komple-option-${input.value}`
+  
+          }
+  
+          api[key] = input[valueKey]
+
+        }
+        
+        saveSettings()
+      })
+
+      inputs[key] = input
+
+    }
+
+  }
+
+  createInputs()  
 
   let modalFooter = document.createElement('div')
   modalFooter.classList.add('komple-config-footer')
   modalContent.appendChild(modalFooter)
 
-  let modalCloseButton = document.createElement('button')
-  modalCloseButton.textContent = 'Close'
-  modalCloseButton.addEventListener('click', () => {
-    modalBackground.style.display = 'none'
+  let cloneApiButton = document.createElement('button')
+  cloneApiButton.textContent = 'Clone'
+  cloneApiButton.addEventListener('click', () => {
+
+    let newApi = {
+      ...JSON.parse(JSON.stringify(settings.api)),
+      otherBodyParams: JSON.parse(JSON.stringify(settings.api.otherBodyParams)),
+      name: `${settings.api.name}-clone`
+    }
+
+    settings.apis.push(newApi)
+    settings.currentApiName = newApi.name
+
+    createOptions()
+    createInputs()
+    saveSettings()
+
   })
 
-  modalFooter.appendChild(modalCloseButton)
+  let deleteApiButton = document.createElement('button')
+  deleteApiButton.textContent = 'Delete'
+  deleteApiButton.addEventListener('click', () => {
+    
+    if ( settings.apis.length === 1 ) {
+      alert('You must have at least one API.')
+      return
+    }
+
+    settings.apis = settings.apis.filter(({ name }) => name !== settings.currentApiName)
+    settings.currentApiName = settings.apis[settings.apis.length - 1].name
+
+    createOptions()
+    createInputs()
+    saveSettings()
+
+  })
+
+  modalFooter.appendChild(cloneApiButton)
+  modalFooter.appendChild(deleteApiButton)
 
   document.body.appendChild(modalBackground)
 
   return modalBackground
 }
 
-komple = {
-  enable, disable, api
-}
-
-komple.enable()
+enable()
