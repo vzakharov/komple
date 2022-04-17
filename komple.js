@@ -31,7 +31,7 @@ let debug = what => {
 }
 
 let autocompleteTimer = null
-let runningAutocompletes = []
+let autocompleteInProgress = null
 
 const autocompleteListener = ({ key, ctrlKey }) => {
   // If it's a space or an opening bracket, parenthesis, etc., start the autocomplete timer. If anything else, cancel the timer and cancel any autocompletion in progress. If it's ctrl+space, start the autocomplete right away.
@@ -48,14 +48,15 @@ const autocompleteListener = ({ key, ctrlKey }) => {
 
 function cancelAutocomplete() {
 
-  autocompleteTimer && (
+  console.log('Cancelling autocomplete')
+  if ( autocompleteTimer || autocompleteInProgress ) {
     console.log('Autocomplete timer canceled'),
     clearTimeout(autocompleteTimer),
     autocompleteTimer = null,
-    runningAutocompletes = [],
+    autocompleteInProgress = null,
     // Remove element with id 'komple-thinking'
     document.getElementById('komple-thinking')?.remove()
-  )
+  }
 
 }
 
@@ -82,6 +83,9 @@ const configureListener = ({ key, altKey }) => {
 
       let index = 0
       
+      // 'Choose an API'
+      div.appendChild(document.createElement('div')).innerHTML = '<b>Choose an API</b>'
+
       for ( let api of settings.apis ) {
 
         index++
@@ -106,7 +110,7 @@ const configureListener = ({ key, altKey }) => {
       }]
 
       let configDiv = document.createElement('div')
-      configDiv.innerText = '[Alt+C] Configure'
+      configDiv.innerText = '[Alt+C] Configure APIs'
 
       // Add listener on Alt+C
       let configListener = ['keydown', ({ key, altKey }) => {
@@ -148,7 +152,7 @@ const escapeListener = ({ key }) => {
 
 function enable() {
 
-  document.addEventListener('keyup', autocompleteListener)
+  document.addEventListener('keydown', autocompleteListener)
   document.addEventListener('keydown', configureListener)
   // cancel autocomplete on mouse click
   document.addEventListener('click', cancelAutocomplete)
@@ -167,7 +171,7 @@ function enable() {
 
 function disable() {
 
-  document.removeEventListener('keyup', autocompleteListener)
+  document.removeEventListener('keydown', autocompleteListener)
   document.removeEventListener('keydown', configureListener)
   document.removeEventListener('click', cancelAutocomplete)
   document.removeEventListener('keydown', escapeListener)
@@ -206,7 +210,7 @@ function createDivUnderCurrentElement(attributes, callback) {
   div.style.color = 'rgba(0,0,0,0.7)'
 
   let currentElement = getCurrentElement()
-  console.log('currentElement:', currentElement)
+  // console.log('currentElement:', currentElement)
   let { bottom, left } = currentElement.getBoundingClientRect()
   div.style.top = bottom + 'px'
   div.style.left = left + 'px'
@@ -216,24 +220,25 @@ function createDivUnderCurrentElement(attributes, callback) {
 
   document.body.appendChild(div)
 
-  console.log('Created div:', div)
+  // console.log('Created div:', div)
 
   return div
 
 }
 
-async function autocomplete(currentElement) {
+async function autocomplete() {
 
-  // If current element is provided, focus on it
-  currentElement && currentElement.focus()
+  if ( autocompleteInProgress )
+    cancelAutocomplete()
 
   // Assign a random id to this autocomplete
   let id = Math.random().toString(36).substring(2, 15)
-  runningAutocompletes.push(id)
+  autocompleteInProgress = id
   console.log('Autocomplete started, id = ' + id)
 
-  // Display a thinking robot emoji under the caret
-  let thinking = createDivUnderCurrentElement({
+  let thinking = document.getElementById('komple-thinking')
+  
+  thinking = createDivUnderCurrentElement({
     id: 'komple-thinking',
     innerHTML: '🤖🤔'
   })
@@ -249,7 +254,7 @@ async function autocomplete(currentElement) {
   // let element = deepestMatchingChild(document.activeElement)
   let element = document.activeElement
 
-  console.log('Enclosing element:', element)
+  // console.log('Enclosing element:', element)
 
   if ( element ) {
 
@@ -278,8 +283,7 @@ async function autocomplete(currentElement) {
     try {
       let completion = await getSuggestion(prompt.replace(/\s+$/, ''))
     
-
-      if ( runningAutocompletes.includes(id) ) {
+      if ( autocompleteInProgress === id ) {
         // If prompt ends with a space, remove the leading space from the completion
         prompt.match(/\s+$/) && ( completion = completion.replace(/^\s+/, '') )
   
@@ -289,13 +293,13 @@ async function autocomplete(currentElement) {
         console.log('Completion:', completion)
   
         simulateTextInput(completion)
-        // setCaretPosition(element, initialCaretPosition)
-        thinking.remove()
+
+        cancelAutocomplete()
       }
   
     } catch (e) {
       console.log('Error:', e)
-      thinking?.remove?.()
+      cancelAutocomplete()
     }
 
   }
