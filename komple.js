@@ -61,11 +61,90 @@ function cancelAutocomplete() {
 
 const configureListener = ({ key, altKey }) => {
   if ( key === 'k' && altKey ) {
-    let configModal = document.getElementById('komple-config') || createConfigModal()
-    configModal.style.display = configModal.style.display === 'none' ? 'block' : 'none'
+
+    let apiPicker = document.getElementById('komple-api-picker')
+    let configModal = document.getElementById('komple-config')
+    let configVisible = configModal && configModal.style.display !== 'none'
+
+    if ( apiPicker || configVisible ) {
+      apiPicker?.remove()
+      console.log({ configVisible })
+      if ( configVisible )
+        configModal.style.display = 'none'
+    } else apiPicker = createDivUnderCurrentElement({ id: 'komple-api-picker' }, div => {
+
+      // White transparent background
+      div.style.backgroundColor = 'rgba(255,255,255,0.9)'
+      div.style['border-radius'] = '5px'
+      div.style.padding = '5px'
+      div.style['font-family'] = 'sans-serif'
+      div.style['font-size'] = '0.8em'
+
+      let index = 0
+      
+      for ( let api of settings.apis ) {
+
+        index++
+        let apiDiv = document.createElement('div')
+        apiDiv.innerText = `[Alt+${index}] ${api.name}`
+        apiDiv.className = 'komple-api-picker-item'
+        apiDiv.style['font-weight'] = api === settings.api ? 'bold' : 'normal'
+
+        div.appendChild(apiDiv)
+      }
+
+      // Add listener for alt+numeric keys that will select the corresponding API
+      let numListener = ['keydown', ({ key, altKey }) => {
+        // If no API picker exists, delete the listener and return
+        if ( !document.getElementById('komple-api-picker') )
+          document.removeEventListener(...numListener)
+        else if ( key.match(/^[1-9]$/) && altKey ) {
+          settings.currentApiName = settings.apis[key - 1].name
+          removeApiPicker()
+          autocomplete()
+        }
+      }]
+
+      let configDiv = document.createElement('div')
+      configDiv.innerText = '[Alt+C] Configure'
+
+      // Add listener on Alt+C
+      let configListener = ['keydown', ({ key, altKey }) => {
+        if ( key === 'c' && altKey ) {
+          console.log('Configuring')
+          let configModal = document.getElementById('komple-config') || createConfigModal()
+          configModal.style.display = 'block'
+          removeApiPicker()
+        }
+      }]
+      document.addEventListener(...configListener)
+
+      div.appendChild(configDiv)
+
+      function removeApiPicker() {
+        apiPicker.remove()
+        document.removeEventListener(...numListener)
+        document.removeEventListener(...configListener)
+      }
+
+      document.addEventListener(...numListener)
+
+
+      // Remove the API picker when the user clicks anywhere in the document
+      document.addEventListener('click', removeApiPicker)
+      // ...or presses escape
+
+    })
   }
 }
 
+const escapeListener = ({ key }) => {
+  if ( key === 'Escape' ) {
+    // Remove picker and modal, if either exists
+    document.getElementById('komple-api-picker')?.remove()
+    document.getElementById('komple-config')?.remove()
+  }
+}
 
 function enable() {
 
@@ -73,6 +152,7 @@ function enable() {
   document.addEventListener('keydown', configureListener)
   // cancel autocomplete on mouse click
   document.addEventListener('click', cancelAutocomplete)
+  document.addEventListener('keydown', escapeListener)
 
   // Load extension config from chrome storage
   chrome.storage.sync.get('settings', data => {
@@ -89,6 +169,8 @@ function disable() {
 
   document.removeEventListener('keyup', autocompleteListener)
   document.removeEventListener('keydown', configureListener)
+  document.removeEventListener('click', cancelAutocomplete)
+  document.removeEventListener('keydown', escapeListener)
 
 }
 
@@ -115,7 +197,7 @@ function getCurrentElement() {
   return parentElement
 }
 
-function createDivUnderCurrentElement(attributes) {
+function createDivUnderCurrentElement(attributes, callback) {
 
   let div = document.createElement('div')
   Object.assign(div, attributes)
@@ -128,8 +210,10 @@ function createDivUnderCurrentElement(attributes) {
   let { bottom, left } = currentElement.getBoundingClientRect()
   div.style.top = bottom + 'px'
   div.style.left = left + 'px'
-
   div.style.zIndex = '9999'
+
+  callback?.(div)
+
   document.body.appendChild(div)
 
   console.log('Created div:', div)
@@ -138,7 +222,10 @@ function createDivUnderCurrentElement(attributes) {
 
 }
 
-async function autocomplete() {
+async function autocomplete(currentElement) {
+
+  // If current element is provided, focus on it
+  currentElement && currentElement.focus()
 
   // Assign a random id to this autocomplete
   let id = Math.random().toString(36).substring(2, 15)
@@ -150,7 +237,6 @@ async function autocomplete() {
     id: 'komple-thinking',
     innerHTML: '🤖🤔'
   })
-
 
   // Add another thinking emoji to the end of the thinking element every second
   let thinkingInterval = setInterval(() => {
@@ -566,6 +652,12 @@ function createConfigModal() {
 
   modalFooter.appendChild(cloneApiButton)
   modalFooter.appendChild(deleteApiButton)
+
+  // "Press Alt+K to close"
+  let closeText = document.createElement('div')
+  closeText.textContent = 'Press Alt+K to close'
+
+  modalContent.appendChild(closeText)  
 
   document.body.appendChild(modalBackground)
 
