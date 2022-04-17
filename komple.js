@@ -110,6 +110,34 @@ function deepestMatchingChild(element) {
     
 }
 
+function getCurrentElement() {
+  let { parentElement } = document.getSelection().getRangeAt(0).startContainer
+  return parentElement
+}
+
+function createDivUnderCurrentElement(attributes) {
+
+  let div = document.createElement('div')
+  Object.assign(div, attributes)
+
+  div.style.position = 'fixed'
+  div.style.color = 'rgba(0,0,0,0.7)'
+
+  let currentElement = getCurrentElement()
+  console.log('currentElement:', currentElement)
+  let { bottom, left } = currentElement.getBoundingClientRect()
+  div.style.top = bottom + 'px'
+  div.style.left = left + 'px'
+
+  div.style.zIndex = '9999'
+  document.body.appendChild(div)
+
+  console.log('Created div:', div)
+
+  return div
+
+}
+
 async function autocomplete() {
 
   // Assign a random id to this autocomplete
@@ -118,20 +146,11 @@ async function autocomplete() {
   console.log('Autocomplete started, id = ' + id)
 
   // Display a thinking robot emoji under the caret
-  let thinking = document.createElement('div')
-  thinking.id = 'komple-thinking'
-  thinking.innerText = '🤖🤔'
-  thinking.style.position = 'fixed'
-  // Make it slightly transparent
-  thinking.style.color = 'rgba(0,0,0,0.7)'
+  let thinking = createDivUnderCurrentElement({
+    id: 'komple-thinking',
+    innerHTML: '🤖🤔'
+  })
 
-  let { bottom, left } = document.getSelection().getRangeAt(0).startContainer.parentElement.getBoundingClientRect()
-
-  thinking.style.top = bottom + 'px'
-  thinking.style.left = left + 'px'
-  // Place on top of all other elements
-  thinking.style.zIndex = '9999'
-  document.body.appendChild(thinking)
 
   // Add another thinking emoji to the end of the thinking element every second
   let thinkingInterval = setInterval(() => {
