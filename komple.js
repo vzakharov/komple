@@ -170,21 +170,27 @@ async function autocomplete() {
 
     console.log('Prompt:', prompt)
     
-    let completion = await getSuggestion(prompt.replace(/\s+$/, ''))
+    try {
+      let completion = await getSuggestion(prompt.replace(/\s+$/, ''))
     
 
-    if ( runningAutocompletes.includes(id) ) {
-      // If prompt ends with a space, remove the leading space from the completion
-      prompt.match(/\s+$/) && ( completion = completion.replace(/^\s+/, '') )
-
-      // Remove everything after and including the first newline
-      completion = completion.replace(/\n.*/g, '')
-
-      console.log('Completion:', completion)
-
-      simulateTextInput(completion)
-      // setCaretPosition(element, initialCaretPosition)
-      thinking.remove()
+      if ( runningAutocompletes.includes(id) ) {
+        // If prompt ends with a space, remove the leading space from the completion
+        prompt.match(/\s+$/) && ( completion = completion.replace(/^\s+/, '') )
+  
+        // Remove everything after and including the first newline
+        completion = completion.replace(/\n.*/g, '')
+  
+        console.log('Completion:', completion)
+  
+        simulateTextInput(completion)
+        // setCaretPosition(element, initialCaretPosition)
+        thinking.remove()
+      }
+  
+    } catch (e) {
+      console.log('Error:', e)
+      thinking?.remove?.()
     }
 
   }
@@ -486,7 +492,7 @@ function createConfigModal() {
           api[key] = input[valueKey]
 
         }
-        
+
         saveSettings()
       })
 
