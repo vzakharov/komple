@@ -272,18 +272,6 @@ async function autocomplete() {
 
   if ( element ) {
 
-    let initialCaretPosition = element.textContent.length
-    // simulateTextInput('...')
-    
-    // let prompt =
-    //   // Are we on twitter.com?
-    //   document.location.hostname === 'twitter.com' ?
-    //     getTwitterPrompt(element) :
-    //     // Are we on notion.so?
-    //       document.location.hostname === 'notion.so' &&
-    //         getNotionPrompt()
-    
-
     let builders = {
       'twitter.com': getTwitterPrompt,
       'notion.so': getNotionPrompt,
@@ -330,9 +318,7 @@ async function autocomplete() {
               }
             },
             output: `
-      u/%author%:
-      
-      %comment%
+      u/%author%: %comment%
       `
       
           },
@@ -349,9 +335,7 @@ async function autocomplete() {
       
       Comments:
       %comments%
-      u/%self%:
-      
-      `}
+      u/%self%:`}
     }
     
     let host = document.location.hostname.replace(/^(www\.)?/, '')
@@ -418,14 +402,14 @@ function getTwitterPrompt() {
         let handle = getHandle( element.querySelector('a[role="link"]').href )
         let content = element.querySelector('[lang]').textContent
 
-        output += `${handle}:\n${content}\n\n`
+        output += `${handle}: ${content}\n\n`
       
       }
 
     }
 
     // Add my handle to the end of the list, plus any existing content of the active element
-    output += `${myHandle}:\n${document.activeElement.textContent}`
+    output += `${myHandle}: ${document.activeElement.textContent}`
 
     return output
   } catch (e) {
@@ -458,7 +442,7 @@ function getText(element, { property, replace } = {}) {
   let text = element[property || 'textContent']
   if ( replace )
     text = text.replace(new RegExp(replace[0], 'g'), replace[1])
-    
+
   return text
 }
 
