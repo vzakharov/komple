@@ -123,20 +123,26 @@ const pickerListener = ({ key, altKey }) => {
         }]
 
         let configDiv = document.createElement('div')
-        configDiv.innerText = '[Alt+C] Configure APIs'
+        configDiv.innerText = '[Alt+X] Configure APIs'
+
+        let copyDiv = document.createElement('div')
+        copyDiv.innerText = '[Alt+C] Copy prompt to clipboard'
 
         // Add listener on Alt+C
         let configListener = ['keydown', ({ key, altKey }) => {
-          if ( key === 'c' && altKey ) {
+          if ( key === 'x' && altKey ) {
             console.log('Configuring')
             let configModal = document.getElementById('komple-config') || createConfigModal()
             configModal.style.display = 'block'
-            removeApiPicker()
+          } else if ( key === 'c' && altKey ) {
+            navigator.clipboard.writeText(getPrompt())
           }
+          removeApiPicker()
         }]
         document.addEventListener(...configListener)
 
         div.appendChild(configDiv)
+        div.appendChild(copyDiv)
 
         function removeApiPicker() {
           apiPicker.remove()
@@ -272,83 +278,7 @@ async function autocomplete() {
 
   if ( element ) {
 
-    let builders = {
-      'twitter.com': getTwitterPrompt,
-      'notion.so': getNotionPrompt,
-      'reddit.com': {
-        pieces: {
-          author: {
-            selector: '[data-click-id="user"]',
-            last: true
-          },
-          title: {
-            selector: 'title'
-          },
-          post: {
-            selector: '[data-click-id="text"]',
-            last: true
-          },
-          comments: {
-            many: true,
-            crawl: true, // we start with the active element (where we will be adding new comments) and crawl backwards
-            stop: {
-              // stop at the first comment in *this* thread, its padding-left is 16px
-              style: {
-                'padding-left': '16px'
-              }
-            },
-            extract: {
-              author: {
-                test: {
-                  attributes: {
-                    'data-testid': {
-                      value: 'comment_author_link'
-                    }
-                  }
-                }
-              },
-              comment: {
-                test: {
-                  attributes: {
-                    'data-testid': {
-                      value: 'comment'
-                    }
-                  }
-                }
-              }
-            },
-            output: `
-      u/%author%: %comment%
-      `
-      
-          },
-          self: {
-            // First <a> element that is a descendant of an element with style="max-width:100%"
-            selector: '[class="header-user-dropdown"] > button > span > span > span > span'
-          }
-        },
-        output: `
-      %title%
-      Posted by %author%
-      
-      %post%
-      
-      Comments:
-      %comments%
-      u/%self%:`}
-    }
-    
-    let host = document.location.hostname.replace(/^(www\.)?/, '')
-    let builder = builders[host]
-    console.log('Builder:', builder)
-    let prompt = 
-      builder ?
-        typeof builder === 'function' ? 
-          builder(element) 
-          : getPromptFromRules(builder) + element.textContent
-        : element.textContent
-
-    console.log('Prompt:', prompt)
+    let prompt = getPrompt(element)
     
     try {
       let completion = await getSuggestion(prompt.replace(/\s+$/, ''))
@@ -374,6 +304,86 @@ async function autocomplete() {
 
   }
 
+}
+
+function getPrompt(element = document.activeElement) {
+  let builders = {
+    'twitter.com': getTwitterPrompt,
+    'notion.so': getNotionPrompt,
+    'reddit.com': {
+      pieces: {
+        author: {
+          selector: '[data-click-id="user"]',
+          last: true
+        },
+        title: {
+          selector: 'title'
+        },
+        post: {
+          selector: '[data-click-id="text"]',
+          last: true
+        },
+        comments: {
+          many: true,
+          crawl: true,
+          stop: {
+            // stop at the first comment in *this* thread, its padding-left is 16px
+            style: {
+              'padding-left': '16px'
+            }
+          },
+          extract: {
+            author: {
+              test: {
+                attributes: {
+                  'data-testid': {
+                    value: 'comment_author_link'
+                  }
+                }
+              }
+            },
+            comment: {
+              test: {
+                attributes: {
+                  'data-testid': {
+                    value: 'comment'
+                  }
+                }
+              }
+            }
+          },
+          output: `
+      u/%author%: %comment%
+      `
+        },
+        self: {
+          // First <a> element that is a descendant of an element with style="max-width:100%"
+          selector: '[class="header-user-dropdown"] > button > span > span > span > span'
+        }
+      },
+      output: `
+      %title%
+      Posted by %author%
+      
+      %post%
+      
+      Comments:
+      %comments%
+      u/%self%:`
+    }
+  }
+
+  let host = document.location.hostname.replace(/^(www\.)?/, '')
+  let builder = builders[host]
+  console.log('Builder:', builder)
+  let prompt = builder ?
+    typeof builder === 'function' ?
+      builder(element)
+      : getPromptFromRules(builder) + element.textContent
+    : element.textContent
+
+  console.log('Prompt:', prompt)
+  return prompt
 }
 
 function getTwitterPrompt() {
