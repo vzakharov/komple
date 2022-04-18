@@ -35,15 +35,15 @@ let autocompleteInProgress = null
 
 const autocompleteListener = ({ key, ctrlKey }) => {
   // If it's a space or an opening bracket, parenthesis, etc., start the autocomplete timer. If anything else, cancel the timer and cancel any autocompletion in progress. If it's ctrl+space, start the autocomplete right away.
-  key === ' ' && ctrlKey ? 
-    autocomplete() 
-    : key.match(/^[\[\(\{\s“]$/) ?
-      (
-        autocompleteTimer = setTimeout(
-          () => autocomplete(),
-        500),
-        console.log('Autocomplete timer started')
-      ) : !ctrlKey && cancelAutocomplete()
+  key === ' ' && ctrlKey && 
+    autocomplete()
+    // : key.match(/^[\[\(\{\s“]$/) ?
+    //   (
+    //     autocompleteTimer = setTimeout(
+    //       () => autocomplete(),
+    //     500),
+    //     console.log('Autocomplete timer started')
+    //   ) : !ctrlKey && cancelAutocomplete()
 }
 
 function cancelAutocomplete() {
@@ -414,7 +414,7 @@ function getTwitterPrompt() {
     // If it's an <article> element, add it to the list of messages
     if ( element.tagName === 'ARTICLE' ) {
       let handle = getHandle( element.querySelector('a[role="link"]').href )
-      let content = element.querySelector('[lang]').textContent
+      let content = element.querySelector('[lang]')?.textContent || '[image]'
 
       output += `${handle}: ${content}\n\n`
     
