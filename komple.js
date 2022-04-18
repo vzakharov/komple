@@ -86,13 +86,6 @@ const pickerListener = ({ key, altKey }) => {
       getCurrentElement()?.isContentEditable ? 
         apiPicker = createDivUnderCurrentElement({ id: 'komple-api-picker' }, div => {
 
-        // White transparent background
-        div.style.backgroundColor = 'rgba(255,255,255,0.9)'
-        div.style['border-radius'] = '5px'
-        div.style.padding = '5px'
-        div.style['font-family'] = 'sans-serif'
-        div.style['font-size'] = '0.8em'
-
         let index = 0
         
         // 'Choose an API'
@@ -134,10 +127,11 @@ const pickerListener = ({ key, altKey }) => {
             console.log('Configuring')
             let configModal = document.getElementById('komple-config') || createConfigModal()
             configModal.style.display = 'block'
+            removeApiPicker()
           } else if ( key === 'c' && altKey ) {
             navigator.clipboard.writeText(getPrompt())
+            removeApiPicker()
           }
-          removeApiPicker()
         }]
         document.addEventListener(...configListener)
 
@@ -235,6 +229,11 @@ function createDivUnderCurrentElement(attributes, callback) {
   div.style.top = bottom + 'px'
   div.style.left = left + 'px'
   div.style.zIndex = '9999'
+  div.style.backgroundColor = '#fff'
+  div.style['border-radius'] = '5px'
+  div.style.padding = '5px'
+  div.style['font-family'] = 'sans-serif'
+  div.style['font-size'] = '0.8em'
 
   callback?.(div)
 
@@ -260,13 +259,13 @@ async function autocomplete() {
   
   thinking = createDivUnderCurrentElement({
     id: 'komple-thinking',
-    innerHTML: '🤖🤔'
+    innerHTML: `Completing with <b>${settings.currentApiName}</b>...`
   })
 
   // Add another thinking emoji to the end of the thinking element every second
   let thinkingInterval = setInterval(() => {
     document.getElementById('komple-thinking') ?
-      thinking.innerText += '🤔'
+      thinking.innerHTML += '.'
       : clearInterval(thinkingInterval)
   }, 1000)
 
