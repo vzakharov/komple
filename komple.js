@@ -375,11 +375,17 @@ function getPrompt(element = document.activeElement) {
   let host = document.location.hostname.replace(/^(www\.)?/, '')
   let builder = builders[host]
   console.log('Builder:', builder)
-  let prompt = builder ?
+  let prompt
+  try {
+    prompt = builder ?
     typeof builder === 'function' ?
       builder(element)
       : getPromptFromRules(builder) + element.textContent
     : element.textContent
+  } catch (e) {
+    console.log('Error:', e)
+    prompt = element.textContent
+  }
 
   console.log('Prompt:', prompt)
   return prompt
@@ -387,43 +393,39 @@ function getPrompt(element = document.activeElement) {
 
 function getTwitterPrompt() {
 
-  try {
-    // function to extract Twitter handle from href
-    const getHandle = href => href.replace(/^.*?(\w+)$/, '@$1')
+  // function to extract Twitter handle from href
+  const getHandle = href => href.replace(/^.*?(\w+)$/, '@$1')
 
-    // Find element with aria-label "Profile" and extract the Twitter handle from its href
-    let myHandle = getHandle( document.querySelector('[aria-label="Profile"]').href )
+  // Find element with aria-label "Profile" and extract the Twitter handle from its href
+  let myHandle = getHandle( document.querySelector('[aria-label="Profile"]').href )
 
-    // Find element with aria-label of Timeline: Conversation
-    let conversation = document.querySelector('[aria-label="Timeline: Conversation"]')
+  // Find element with aria-label of Timeline: Conversation
+  let conversation = document.querySelector('[aria-label="Timeline: Conversation"]')
 
-    let output = ''
+  let output = ''
 
-    // Scan through all its decendants, adding items if it's an <article> element
-    for ( let element of conversation.querySelectorAll('*') ) {
+  // Scan through all its decendants, adding items if it's an <article> element
+  for ( let element of conversation.querySelectorAll('*') ) {
 
-      // If it's the current active element, exit the loop
-      if ( element === document.activeElement )
-        break
+    // If it's the current active element, exit the loop
+    if ( element === document.activeElement )
+      break
 
-      // If it's an <article> element, add it to the list of messages
-      if ( element.tagName === 'ARTICLE' ) {
-        let handle = getHandle( element.querySelector('a[role="link"]').href )
-        let content = element.querySelector('[lang]').textContent
+    // If it's an <article> element, add it to the list of messages
+    if ( element.tagName === 'ARTICLE' ) {
+      let handle = getHandle( element.querySelector('a[role="link"]').href )
+      let content = element.querySelector('[lang]').textContent
 
-        output += `${handle}: ${content}\n\n`
-      
-      }
-
+      output += `${handle}: ${content}\n\n`
+    
     }
 
-    // Add my handle to the end of the list, plus any existing content of the active element
-    output += `${myHandle}: ${document.activeElement.textContent}`
-
-    return output
-  } catch (e) {
-    console.log(e)
   }
+
+  // Add my handle to the end of the list, plus any existing content of the active element
+  output += `${myHandle}: ${document.activeElement.textContent}`
+
+  return output
 
 }
 
