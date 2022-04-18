@@ -60,7 +60,17 @@ function cancelAutocomplete() {
 
 }
 
-const configureListener = ({ key, altKey }) => {
+function toggleConfigModal() {
+  let 
+    modal = document.getElementById('komple-config')
+
+  if ( modal )
+    modal.style.display = modal.style.display === 'none' ? 'block' : 'none'
+  else 
+    createConfigModal()
+}
+
+const pickerListener = ({ key, altKey }) => {
   if ( key === 'k' && altKey ) {
 
     let apiPicker = document.getElementById('komple-api-picker')
@@ -72,73 +82,77 @@ const configureListener = ({ key, altKey }) => {
       console.log({ configVisible })
       if ( configVisible )
         configModal.style.display = 'none'
-    } else apiPicker = createDivUnderCurrentElement({ id: 'komple-api-picker' }, div => {
+    } else 
+      getCurrentElement()?.isContentEditable ? 
+        apiPicker = createDivUnderCurrentElement({ id: 'komple-api-picker' }, div => {
 
-      // White transparent background
-      div.style.backgroundColor = 'rgba(255,255,255,0.9)'
-      div.style['border-radius'] = '5px'
-      div.style.padding = '5px'
-      div.style['font-family'] = 'sans-serif'
-      div.style['font-size'] = '0.8em'
+        // White transparent background
+        div.style.backgroundColor = 'rgba(255,255,255,0.9)'
+        div.style['border-radius'] = '5px'
+        div.style.padding = '5px'
+        div.style['font-family'] = 'sans-serif'
+        div.style['font-size'] = '0.8em'
 
-      let index = 0
-      
-      // 'Choose an API'
-      div.appendChild(document.createElement('div')).innerHTML = '<b>Choose an API</b>'
+        let index = 0
+        
+        // 'Choose an API'
+        div.appendChild(document.createElement('div')).innerHTML = '<b>Choose an API</b>'
 
-      for ( let api of settings.apis ) {
+        for ( let api of settings.apis ) {
 
-        index++
-        let apiDiv = document.createElement('div')
-        apiDiv.innerText = `[Alt+${index}] ${api.name}`
-        apiDiv.className = 'komple-api-picker-item'
-        apiDiv.style['font-weight'] = api === settings.api ? 'bold' : 'normal'
+          index++
+          let apiDiv = document.createElement('div')
+          apiDiv.innerText = `[Alt+${index}] ${api.name}`
+          apiDiv.className = 'komple-api-picker-item'
+          apiDiv.style['font-weight'] = api === settings.api ? 'bold' : 'normal'
 
-        div.appendChild(apiDiv)
-      }
+          div.appendChild(apiDiv)
+        }
 
-      // Add listener for alt+numeric keys that will select the corresponding API
-      let numListener = ['keydown', ({ key, altKey }) => {
-        // If no API picker exists, delete the listener and return
-        if ( !document.getElementById('komple-api-picker') )
+        // Add listener for alt+numeric keys that will select the corresponding API
+        let numListener = ['keydown', ({ key, altKey }) => {
+          // If no API picker exists, delete the listener and return
+          if ( !document.getElementById('komple-api-picker') )
+            document.removeEventListener(...numListener)
+          else if ( key.match(/^[1-9]$/) && altKey ) {
+            settings.currentApiName = settings.apis[key - 1].name
+            saveSettings()
+            removeApiPicker()
+            autocomplete()
+          }
+        }]
+
+        let configDiv = document.createElement('div')
+        configDiv.innerText = '[Alt+C] Configure APIs'
+
+        // Add listener on Alt+C
+        let configListener = ['keydown', ({ key, altKey }) => {
+          if ( key === 'c' && altKey ) {
+            console.log('Configuring')
+            let configModal = document.getElementById('komple-config') || createConfigModal()
+            configModal.style.display = 'block'
+            removeApiPicker()
+          }
+        }]
+        document.addEventListener(...configListener)
+
+        div.appendChild(configDiv)
+
+        function removeApiPicker() {
+          apiPicker.remove()
           document.removeEventListener(...numListener)
-        else if ( key.match(/^[1-9]$/) && altKey ) {
-          settings.currentApiName = settings.apis[key - 1].name
-          removeApiPicker()
-          autocomplete()
+          document.removeEventListener(...configListener)
         }
-      }]
 
-      let configDiv = document.createElement('div')
-      configDiv.innerText = '[Alt+C] Configure APIs'
-
-      // Add listener on Alt+C
-      let configListener = ['keydown', ({ key, altKey }) => {
-        if ( key === 'c' && altKey ) {
-          console.log('Configuring')
-          let configModal = document.getElementById('komple-config') || createConfigModal()
-          configModal.style.display = 'block'
-          removeApiPicker()
-        }
-      }]
-      document.addEventListener(...configListener)
-
-      div.appendChild(configDiv)
-
-      function removeApiPicker() {
-        apiPicker.remove()
-        document.removeEventListener(...numListener)
-        document.removeEventListener(...configListener)
-      }
-
-      document.addEventListener(...numListener)
+        document.addEventListener(...numListener)
 
 
-      // Remove the API picker when the user clicks anywhere in the document
-      document.addEventListener('click', removeApiPicker)
-      // ...or presses escape
+        // Remove the API picker when the user clicks anywhere in the document
+        document.addEventListener('click', removeApiPicker)
+        // ...or presses escape
 
-    })
+        }) 
+        : toggleConfigModal()
   }
 }
 
@@ -153,7 +167,7 @@ const escapeListener = ({ key }) => {
 function enable() {
 
   document.addEventListener('keydown', autocompleteListener)
-  document.addEventListener('keydown', configureListener)
+  document.addEventListener('keydown', pickerListener)
   // cancel autocomplete on mouse click
   document.addEventListener('click', cancelAutocomplete)
   document.addEventListener('keydown', escapeListener)
@@ -172,7 +186,7 @@ function enable() {
 function disable() {
 
   document.removeEventListener('keydown', autocompleteListener)
-  document.removeEventListener('keydown', configureListener)
+  document.removeEventListener('keydown', pickerListener)
   document.removeEventListener('click', cancelAutocomplete)
   document.removeEventListener('keydown', escapeListener)
 
@@ -439,19 +453,25 @@ function getNotionPrompt() {
 }
 
 function getText(element, { property, replace } = {}) {
+  if (!element) return ''
+
   let text = element[property || 'textContent']
   if ( replace )
     text = text.replace(new RegExp(replace[0], 'g'), replace[1])
+    
   return text
 }
 
 function testObject(object, test) {
   for ( let property in test ) {
     // If Object, recurse; otherwise, test the value
-    let passed = 
-      ( typeof test[property] === 'object') ? 
-        testObject(object[property], test[property]) 
-        : object?.[property] === test[property]
+    let 
+      value = object?.[property], 
+      testValue = test[property],
+      passed =
+        ( typeof testValue === 'object' ) ?
+          testObject(value, testValue)
+          : value === testValue
     if ( !passed )
       return false
   }
@@ -797,45 +817,69 @@ function createConfigModal() {
   modalFooter.classList.add('komple-config-footer')
   modalContent.appendChild(modalFooter)
 
-  let cloneApiButton = document.createElement('button')
-  cloneApiButton.textContent = 'Clone'
-  cloneApiButton.addEventListener('click', () => {
 
-    let newApi = {
-      ...JSON.parse(JSON.stringify(settings.api)),
-      otherBodyParams: JSON.parse(JSON.stringify(settings.api.otherBodyParams)),
-      name: `${settings.api.name}-clone`
+  let buttonDiv = document.createElement('div')
+  buttonDiv.classList.add('komple-config-buttons')
+  // Align right with margins and paddings as needed
+  buttonDiv.style.cssText = 'display: flex; justify-content: flex-end; margin-top: 10px; margin-bottom: 10px;' 
+
+  let buttonActions = ({
+    Clone() {
+      
+      let newApi = {
+        ...JSON.parse(JSON.stringify(settings.api)),
+        otherBodyParams: JSON.parse(JSON.stringify(settings.api.otherBodyParams)),
+        name: `${settings.api.name}-clone`
+      }
+
+      settings.apis.push(newApi)
+      settings.currentApiName = newApi.name
+
+    },
+    Delete() {
+        
+      if ( settings.apis.length === 1 ) {
+        alert('You must have at least one API.')
+        return
+      }
+
+      settings.apis = settings.apis.filter(({ name }) => name !== settings.currentApiName)
+      settings.currentApiName = settings.apis[settings.apis.length - 1].name
+
+    },
+    Nudge() {
+      // Move up
+      let index = settings.apis.findIndex(({ name }) => name === settings.currentApiName)
+      if ( index === 0 ) return
+      let previousIndex = index - 1
+      let previousApi = settings.apis[previousIndex]
+      settings.apis[previousIndex] = settings.apis[index]
+      settings.apis[index] = previousApi
+
     }
-
-    settings.apis.push(newApi)
-    settings.currentApiName = newApi.name
-
-    createOptions()
-    createInputs()
-    saveSettings()
-
   })
 
-  let deleteApiButton = document.createElement('button')
-  deleteApiButton.textContent = 'Delete'
-  deleteApiButton.addEventListener('click', () => {
-    
-    if ( settings.apis.length === 1 ) {
-      alert('You must have at least one API.')
-      return
-    }
+  for ( let caption in buttonActions ) {
+    let action = buttonActions[caption]
+    let button = document.createElement('button')
+    button.textContent = caption
+    button.id = `komple-config-button-${caption.toLowerCase()}`
+    button.addEventListener('click', () => {
+      action()
+      createOptions()
+      createInputs()
+      saveSettings()
+    })
+    // A-la bootstrap outline secondary
+    button.style.cssText = 'border: 1px solid #ccc; border-radius: 4px; padding: 5px 10px; margin-right: 5px;'
+    // highlight on hover
+    button.onmouseover = () => button.style.backgroundColor = '#eee'
+    button.onmouseout = () => button.style.backgroundColor = '#fff'
+    buttonDiv.appendChild(button)
+  }
 
-    settings.apis = settings.apis.filter(({ name }) => name !== settings.currentApiName)
-    settings.currentApiName = settings.apis[settings.apis.length - 1].name
+  modalFooter.appendChild(buttonDiv)
 
-    createOptions()
-    createInputs()
-    saveSettings()
-
-  })
-
-  modalFooter.appendChild(cloneApiButton)
-  modalFooter.appendChild(deleteApiButton)
 
   // "Press Alt+K to close"
   let closeText = document.createElement('div')
