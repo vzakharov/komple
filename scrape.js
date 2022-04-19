@@ -1,4 +1,4 @@
-const logMode = ''
+let logMode = ''
 
 const log = (mode, ...what) => (
   mode.split(',').includes(logMode) && console.log(...what),
@@ -12,11 +12,11 @@ if ( !getCurrentElement ) // in case we're running this right from the console (
   }
 
 // Function to scrape all text preceding a certain element.
-function scrapePrompt({ stop, whatIsScraped, whatIsInputed } = {
-  stop: { selector: 'body' },
-  whatIsScraped: 'text',
-  whatIsInputed: 'user input'
-}) {
+function scrapePrompt({ 
+  stop = { selector: 'body'}, 
+  whatIsScraped = 'text', 
+  whatIsInputed = 'user input' 
+} = {} ) {
   let 
     node = getCurrentElement(),
     text = '',
@@ -56,8 +56,8 @@ function scrapePrompt({ stop, whatIsScraped, whatIsInputed } = {
           { parentElement } = node,
           lastParentElement = lastAddedNode?.parentElement
 
-        let addNewLine = parentElement.offsetTop !== lastParentElement?.offsetTop
-        log('full,mid', 'add new line', addNewLine, parentElement.offsetTop, lastParentElement?.offsetTop)
+        let addNewLine = parentElement.offsetTop + parentElement.offsetHeight < lastParentElement?.offsetTop
+        log('full,mid', 'add new line', addNewLine, parentElement, lastParentElement)
         text = node.textContent.trim() + ( addNewLine ? '\n' : ' ' ) + text
         lastAddedNode = node
       }
@@ -87,11 +87,11 @@ function scrapePrompt({ stop, whatIsScraped, whatIsInputed } = {
   
 }
 
-scrapePrompt({
-  stop: {
-    selector: 'h2'
-  }
-})
+// scrapePrompt({
+//   stop: {
+//     selector: 'h2'
+//   }
+// })
 
 // // Bind the function to alt+q
 // document.addEventListener('keydown', ({ key, altKey }) => {
