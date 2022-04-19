@@ -1,7 +1,7 @@
-const logMode = 'mid'
+const logMode = ''
 
 const log = (mode, ...what) => (
-  mode.split(' ').includes(logMode) && console.log(...what),
+  mode.split(',').includes(logMode) && console.log(...what),
   what[what.length - 1]
 )
 
@@ -12,9 +12,15 @@ if ( !getCurrentElement ) // in case we're running this right from the console (
   }
 
 // Function to scrape all text preceding a certain element.
-function scrapePrompt({ stop }) {
-  let node = getCurrentElement()
-  let text = ''
+function scrapePrompt({ stop, whatIsScraped, whatIsInputed } = {
+  stop: { selector: 'body' },
+  whatIsScraped: 'text',
+  whatIsInputed: 'user input'
+}) {
+  let 
+    node = getCurrentElement(),
+    text = '',
+    lastAddedNode = null
 
   const isStopElement = element => element.matches?.(stop.selector) || element == document.body
   
@@ -43,39 +49,17 @@ function scrapePrompt({ stop }) {
           && node.parentElement.offsetParent 
           && node.nodeType !== Node.COMMENT_NODE 
       ) {
-        log('full mid', 'adding text', node.textContent, node.offsetTop)
+        log('full,mid', 'adding text', node.textContent, node.offsetTop)
 
         // Let's see if we need to add a new line.
         let 
-          addNewLine = node.nodeName === 'BR',
-          checkNode = node
+          { parentElement } = node,
+          lastParentElement = lastAddedNode?.parentElement
 
-        addNewLineLoop:
-        while ( !addNewLine ) {
-          // If there's a previous sibling, compare its offsetTop to the node's offsetTop. If it's the same, we don't need a new line.
-          let { previousSibling } = checkNode
-          if ( previousSibling ) {
-            
-            addNewLine = 
-              checkNode.nodeType !== Node.TEXT_NODE 
-              && checkNode.offsetTop !== previousSibling.offsetTop
-
-            log('full mid', 'add new line?', addNewLine, checkNode, previousSibling)
-            break
-          } else {
-            // Iterate to the topmost parent element with a previous sibling.
-            while ( !checkNode.previousSibling  ) {
-              checkNode = checkNode.parentElement
-              log('full', 'no previous sibling, going up', checkNode)
-              if ( isStopElement(checkNode) ) {
-                log('full', 'no previous sibling, stopping', checkNode)
-                break addNewLineLoop
-              }
-            }
-          }
-          
-        }
-        text = `${addNewLine ? '\n' : ' '}${node.textContent.trim()}${text}`
+        let addNewLine = parentElement.offsetTop !== lastParentElement?.offsetTop
+        log('full,mid', 'add new line', addNewLine, parentElement.offsetTop, lastParentElement?.offsetTop)
+        text = node.textContent.trim() + ( addNewLine ? '\n' : ' ' ) + text
+        lastAddedNode = node
       }
 
     } else { 
@@ -92,14 +76,13 @@ function scrapePrompt({ stop }) {
 
   }
 
+  text = 'Predict user input based on scraped text.\n\n== scraped text ==\n\n' + text
   // Trim text and replace any more than 2 consecutive new lines with a double new line.
-  text = text.trim().replace(/\n{2,}/g, '\n\n')
+  text = text.trim().replace(/(\n\s*){2,}/g, '\n\n')
 
-  text = `Predict user input based on text scraped from the page.\n\n== Text scraped from ${window.location.href} ==\n\n${text}`
+  text = `${text}\n\n== ${whatIsInputed} predicted based on the ${whatIsScraped} above, as scraped from ${window.location.href} ==\n\n`
 
-  text = `${text}\n\n== User's input ==\n\n`
-
-  console.log(text)
+  log('full', 'text', text)
   return text
   
 }
