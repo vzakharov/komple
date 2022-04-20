@@ -313,7 +313,7 @@ async function autocomplete() {
 
 }
 
-function getPrompt(element = document.activeElement) {
+function getPrompt(element = getCurrentElement()) {
   let builders = {
     'twitter.com': getTwitterPrompt,
     'notion.so': getNotionPrompt,
@@ -385,6 +385,11 @@ function getPrompt(element = document.activeElement) {
       },
       whatIsScraped: 'conversation',
       whatIsInputed: 'user reply',
+    },
+    'quora.com': {
+      whatIsScraped: 'question',
+      whatIsInputed: 'insightful answer',
+      instruction: 'Here is an insightful answer on Quora',
     }
   }
 
@@ -429,7 +434,7 @@ function getTwitterPrompt() {
   // Find element with aria-label of Timeline: Conversation
   let conversation = document.querySelector('[aria-label="Timeline: Conversation"]')
 
-  let output = ''
+  let output = `Here is a conversation with an insightful reply by ${myHandle}:\n\n`
 
   // Scan through all its decendants, adding items if it's an <article> element
   for ( let element of conversation.querySelectorAll('*') ) {

@@ -15,7 +15,8 @@ if ( !getCurrentElement ) // in case we're running this right from the console (
 function scrapePrompt({ 
   stop = { selector: 'body'}, 
   whatIsScraped = 'text', 
-  whatIsInputed = 'user input' 
+  whatIsInputed = 'user input predicted' ,
+  instruction = 'Predict user input based on scraped text'
 } = {} ) {
   let 
     node = getCurrentElement(),
@@ -56,9 +57,9 @@ function scrapePrompt({
           { parentElement } = node,
           lastParentElement = lastAddedNode?.parentElement
 
-        let addNewLine = parentElement.offsetTop + parentElement.offsetHeight < lastParentElement?.offsetTop
+        let addNewLine = parentElement.offsetTop + parentElement.offsetHeight <= lastParentElement?.offsetTop
         log('full,mid', 'add new line', addNewLine, parentElement, lastParentElement)
-        text = node.textContent.trim() + ( addNewLine ? '\n' : ' ' ) + text
+        text = node.textContent + ( addNewLine ? '\n' : ' ' ) + text
         lastAddedNode = node
       }
 
@@ -76,11 +77,11 @@ function scrapePrompt({
 
   }
 
-  text = 'Predict user input based on scraped text.\n\n== scraped text ==\n\n' + text
+  text = `${instruction}.\n\n== ${whatIsScraped} from ${window.location.href} ==\n\n${text}`
   // Trim text and replace any more than 2 consecutive new lines with a double new line.
   text = text.trim().replace(/(\n\s*){2,}/g, '\n\n')
 
-  text = `${text}\n\n== ${whatIsInputed} predicted based on the ${whatIsScraped} above, as scraped from ${window.location.href} ==\n\n`
+  text = `${text}\n\n== ${whatIsInputed} based on the ${whatIsScraped} above ==\n\n`
 
   log('full', 'text', text)
   return text

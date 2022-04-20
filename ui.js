@@ -1,3 +1,9 @@
+function addStyleToButton(button) {
+  button.style.cssText = 'border: 1px solid #ccc; border-radius: 4px; padding: 5px 10px; margin-right: 5px; margin-bottom: 5px;'
+  button.onmouseover = () => button.style.backgroundColor = '#eee'
+  button.onmouseout = () => button.style.backgroundColor = '#fff'
+}
+
 function createConfigModal() {
   // Creates and displays a modal dialog to configure the completion API.
   let modalBackground = document.createElement('div')
@@ -32,6 +38,38 @@ function createConfigModal() {
   modalBody.classList.add('komple-config-body')
   modalContent.appendChild(modalBody)
 
+  // Create a button to copy settings to the clipboard.
+  let copyButton = document.createElement('button')
+  copyButton.textContent = 'Copy settings to clipboard'
+  copyButton.onclick = () => {
+    navigator.clipboard.writeText(JSON.stringify(settings, null, 2))
+    let oldText = copyButton.textContent
+    copyButton.textContent = 'Copied!'
+    setTimeout(() => copyButton.textContent = oldText, 1000)
+  }
+  addStyleToButton(copyButton)
+  modalBody.appendChild(copyButton)
+
+  // Create a button to input settings from a window.prompt.
+  let inputButton = document.createElement('button')
+  inputButton.textContent = 'Input settings'
+  inputButton.onclick = () => {
+    let input = window.prompt('Paste settings (JSON) here:')
+    try {
+      Object.assign(settings, JSON.parse(input))
+      saveSettings()
+      createOptions()
+      createInputs()
+      inputButton.textContent = 'Input successful!'
+      setTimeout(() => inputButton.textContent = 'Input settings', 1000)
+    } catch (e) {
+      console.error(e)
+      inputButton.textContent = 'Input failed!'
+      setTimeout(() => inputButton.textContent = 'Input settings', 1000)
+    }
+  }
+  addStyleToButton(inputButton)
+  modalBody.appendChild(inputButton)
 
   // Create a dropdown to select the api in settings.apis
   let endpointSelect = document.createElement('select')
@@ -251,11 +289,7 @@ function createConfigModal() {
       createInputs()
       saveSettings()
     })
-    // A-la bootstrap outline secondary
-    button.style.cssText = 'border: 1px solid #ccc; border-radius: 4px; padding: 5px 10px; margin-right: 5px;'
-    // highlight on hover
-    button.onmouseover = () => button.style.backgroundColor = '#eee'
-    button.onmouseout = () => button.style.backgroundColor = '#fff'
+    addStyleToButton(button)
     buttonDiv.appendChild(button)
   }
 
