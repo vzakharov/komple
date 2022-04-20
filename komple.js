@@ -138,7 +138,6 @@ const pickerListener = ( e ) => {
   }
 }
 
-/* 
 const escapeListener = ({ key }) => {
   if ( key === 'Escape' ) {
     // Remove picker and modal, if either exists
