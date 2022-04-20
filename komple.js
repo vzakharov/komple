@@ -1,23 +1,29 @@
 // Komple: A chrome extension that displays an autocomplete suggestion in the currently active element, taking the suggestion from an external API.
 
-let debug = what => {
-  console.log(what)
-  return what
-}
+let logMode = ''
+
+const log = (mode, ...what) => (
+  mode.split(',').includes(logMode) && console.log(...what),
+  what[what.length - 1]
+)
 
 let autocompleteTimer = null
 let autocompleteInProgress = null
 
 const autocompleteListener = ( e ) => {
+  // if the hotkey is pressed, autocomplete
   if ( e.key == settings.hotkeys.autocomplete.key && e.getModifierState(settings.hotkeys.autocomplete.modifier) ) {
     autocomplete()
   } 
+  // if the activateOnHangingChar setting is on, autocomplete after a hanging character is typed
   else if ( settings.activateOnHangingChar ) {
+    // if a hanging character is typed, start the autocomplete timer
     if ( e.key.match(/^[\[\(\{\s“,]$/) ) {
       autocompleteTimer = setTimeout(
         () => autocomplete(),
         500),
         console.log('Autocomplete timer started')
+    // if a non-hanging character is typed, cancel the autocomplete timer
     } else {
       if ( autocompleteTimer || autocompleteInProgress )
         cancelAutocomplete()
@@ -27,13 +33,10 @@ const autocompleteListener = ( e ) => {
 
 function cancelAutocomplete() {
 
-  console.log('Cancelling autocomplete')
   if ( autocompleteTimer || autocompleteInProgress ) {
-    console.log('Autocomplete timer canceled'),
     clearTimeout(autocompleteTimer),
     autocompleteTimer = null,
     autocompleteInProgress = null,
-    // Remove element with id 'komple-thinking'
     document.getElementById('komple-thinking')?.remove()
   }
 
@@ -135,6 +138,7 @@ const pickerListener = ( e ) => {
   }
 }
 
+/* 
 const escapeListener = ({ key }) => {
   if ( key === 'Escape' ) {
     // Remove picker and modal, if either exists

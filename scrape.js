@@ -1,10 +1,3 @@
-let logMode = ''
-
-const log = (mode, ...what) => (
-  mode.split(',').includes(logMode) && console.log(...what),
-  what[what.length - 1]
-)
-
 if ( !getCurrentElement ) // in case we're running this right from the console (otherwise it's already defined in komple.js)
   function getCurrentElement() {
     let { parentElement } = document.getSelection().getRangeAt(0).startContainer
