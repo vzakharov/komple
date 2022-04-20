@@ -8,17 +8,21 @@ let debug = what => {
 let autocompleteTimer = null
 let autocompleteInProgress = null
 
-const autocompleteListener = ({ key, ctrlKey }) => {
-  // If it's a space or an opening bracket, parenthesis, etc., start the autocomplete timer. If anything else, cancel the timer and cancel any autocompletion in progress. If it's ctrl+space, start the autocomplete right away.
-  key === ' ' && ctrlKey && 
+const autocompleteListener = ( e ) => {
+  if ( e.key == settings.hotkeys.autocomplete.key && e.getModifierState(settings.hotkeys.autocomplete.modifier) ) {
     autocomplete()
-    // : key.match(/^[\[\(\{\s“]$/) ?
-    //   (
-    //     autocompleteTimer = setTimeout(
-    //       () => autocomplete(),
-    //     500),
-    //     console.log('Autocomplete timer started')
-    //   ) : !ctrlKey && cancelAutocomplete()
+  } 
+  else if ( settings.activateOnHangingChar ) {
+    if ( e.key.match(/^[\[\(\{\s“,]$/) ) {
+      autocompleteTimer = setTimeout(
+        () => autocomplete(),
+        500),
+        console.log('Autocomplete timer started')
+    } else {
+      if ( autocompleteTimer || autocompleteInProgress )
+        cancelAutocomplete()
+    }
+  }
 }
 
 function cancelAutocomplete() {
@@ -45,8 +49,8 @@ function toggleConfigModal() {
     createConfigModal()
 }
 
-const pickerListener = ({ key, altKey }) => {
-  if ( key === 'k' && altKey ) {
+const pickerListener = ( e ) => {
+  if ( isHotkey(e, 'apiPicker') ) {
 
     let apiPicker = document.getElementById('komple-api-picker')
     let configModal = document.getElementById('komple-config')
