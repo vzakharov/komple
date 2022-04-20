@@ -11,7 +11,7 @@
           "http://*/*",
           "https://*/*"
           ],
-      "js": ["setings.js", "komple.js", "ui.js", "scrape.js"],
+      "js": ["settings.js", "komple.js", "ui.js", "scrape.js"],
       "run_at": "document_end"
       }
   ], 
