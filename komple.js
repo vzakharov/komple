@@ -193,7 +193,7 @@ function deepestMatchingChild(element) {
 }
 
 function getCurrentElement() {
-  let { parentElement } = document.getSelection()?.getRangeAt(0).startContainer
+  let { parentElement } = document.getSelection()?.focusNode
   return parentElement
 }
 
@@ -237,20 +237,6 @@ async function autocomplete() {
   autocompleteInProgress = id
   console.log('Autocomplete started, id = ' + id)
 
-  let thinking = document.getElementById('komple-thinking')
-  
-  thinking = createDivUnderCurrentElement({
-    id: 'komple-thinking',
-    innerHTML: `Completing with <b>${settings.currentApiName}</b>...`
-  })
-
-  // Add another thinking emoji to the end of the thinking element every second
-  let thinkingInterval = setInterval(() => {
-    document.getElementById('komple-thinking') ?
-      thinking.innerHTML += '.'
-      : clearInterval(thinkingInterval)
-  }, 1000)
-
   // // Get the deepest matching child.
   // let element = deepestMatchingChild(document.activeElement)
   let element = document.activeElement
@@ -259,10 +245,11 @@ async function autocomplete() {
 
   if ( element ) {
 
-    let { prompt, feeder } = getPrompt(element)
+    let { prompt, feeder, suffix } = getPrompt(element)
     
     try {
-      let completion = await getSuggestion(prompt.replace(/\s+$/, ''))
+      startThinking( suffix ? 'Inserting' : 'Completing' )
+      let completion = await getSuggestion(prompt.trimRight(), { feeder, suffix })
       if ( feeder ) completion = feeder + completion
     
       if ( autocompleteInProgress === id ) {
@@ -292,6 +279,22 @@ async function autocomplete() {
 
   }
 
+}
+
+function startThinking(action = 'Completing') {
+  let thinking = document.getElementById('komple-thinking')
+
+  thinking = createDivUnderCurrentElement({
+    id: 'komple-thinking',
+    innerHTML: `${action} with <b>${settings.currentApiName}</b>...`
+  })
+
+  // Add another thinking emoji to the end of the thinking element every second
+  let thinkingInterval = setInterval(() => {
+    document.getElementById('komple-thinking') ?
+      thinking.innerHTML += '.'
+      : clearInterval(thinkingInterval)
+  }, 1000)
 }
 
 function getPrompt(element = getCurrentElement()) {
@@ -377,19 +380,27 @@ function getPrompt(element = getCurrentElement()) {
   let host = document.location.hostname.replace(/^(www\.)?/, '')
   let builder = builders[host]
   console.log('Builder:', builder)
-  let 
-    prompt,
-    input = ( 
-      element.textContent || element.value 
-    )?.trim(),
-    feeder = !input && (
-      input = builder?.feeder || ''
-    )
+  let prompt, input, feeder, suffix
+  if ( element.textContent ) {
+    // Get the selection
+    let selection = window.getSelection()
+    // Get the caret position for the beginning and end of the selection
+    let { 
+      anchorOffset, focusOffset,
+      anchorNode, focusNode,
+    } = selection
+    // Split the selection before and after the caret, assigning the values to input and suffix, respectively
+    input = anchorNode.textContent.slice(0, anchorOffset).trimEnd()
+    suffix = ' ' + focusNode.textContent.slice(focusOffset).trimStart()
+  } else {
+    feeder = input = builder?.feeder || ''
+  }
+
 
   try {
     prompt = builder ?
       typeof builder === 'function' ?
-        builder(element)
+        builder(input)
         : ( builder.legacy ?
           getPromptFromRules(builder)  
           : scrapePrompt(builder)
@@ -401,10 +412,10 @@ function getPrompt(element = getCurrentElement()) {
   }
 
   console.log('Prompt:', prompt)
-  return { prompt, feeder: builder?.includeFeeder && feeder }
+  return { prompt, feeder, suffix }
 }
 
-function getTwitterPrompt() {
+function getTwitterPrompt(content) {
 
   // function to extract Twitter handle from href
   const getHandle = href => href.replace(/^.*?(\w+)$/, '@$1')
@@ -436,7 +447,7 @@ function getTwitterPrompt() {
   }
 
   // Add my handle to the end of the list, plus any existing content of the active element
-  output += `${myHandle}: ${document.activeElement.textContent}`
+  output += `${myHandle}: ${content}`
 
   return output
 
@@ -591,12 +602,13 @@ function simulateTextInput(text) {
 
 }
 
-async function getSuggestion(text) {
+async function getSuggestion(text, { suffix }) {
 
     let {
-      endpoint, auth, promptKey, otherBodyParams, arrayKey, resultKey
+      endpoint, auth, promptKey, otherBodyParams, arrayKey, resultKey, suffixKey
     } = settings.api
 
+    console.log({suffixKey, suffix})
     // Get the suggestion from the external API.
     let json = await(
       await fetch(
@@ -609,15 +621,17 @@ async function getSuggestion(text) {
           },
           body: JSON.stringify({
             [promptKey]: text,
+            ...( suffixKey && suffix ) ? { [suffixKey]: suffix } : {},
             ...otherBodyParams
           })
         }
       )
     ).json()
 
-    return arrayKey ? 
-      json[arrayKey][0][resultKey] 
-      : json[resultKey]
+    // return arrayKey ? 
+    //   json[arrayKey][0][resultKey] 
+    //   : json[resultKey]
+    return get(arrayKey ? json[arrayKey][0] : json, resultKey)
 }
 
 function saveSettings() {
