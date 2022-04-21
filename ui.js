@@ -15,7 +15,6 @@ function createConfigModal() {
     target === modalBackground && ( modalBackground.style.display = 'none' )
   })
 
-
   let modal = document.createElement('div')
   // Center-align the modal vertically and horizontally.
   modal.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; border-radius: 10px; z-index: 100000; padding: 20px; font-family: sans-serif;'
@@ -34,9 +33,6 @@ function createConfigModal() {
   modalTitle.textContent = 'Configure completion API'
   modalHeader.appendChild(modalTitle)
 
-  let modalBody = document.createElement('div')
-  modalBody.classList.add('komple-config-body')
-  modalContent.appendChild(modalBody)
 
   // Create a button to copy settings to the clipboard.
   let copyButton = document.createElement('button')
@@ -48,7 +44,7 @@ function createConfigModal() {
     setTimeout(() => copyButton.textContent = oldText, 1000)
   }
   addStyleToButton(copyButton)
-  modalBody.appendChild(copyButton)
+  modalHeader.appendChild(copyButton)
 
   // Create a button to input settings from a window.prompt.
   let inputButton = document.createElement('button')
@@ -69,7 +65,12 @@ function createConfigModal() {
     }
   }
   addStyleToButton(inputButton)
-  modalBody.appendChild(inputButton)
+  modalHeader.appendChild(inputButton)
+
+  let modalBody = document.createElement('div')
+  modalBody.classList.add('komple-config-body')
+  modalContent.appendChild(modalBody)
+
 
   // Create a dropdown to select the api in settings.apis
   let endpointSelect = document.createElement('select')
@@ -294,6 +295,14 @@ function createConfigModal() {
   }
 
   modalFooter.appendChild(buttonDiv)
+
+  // Add a 'buy me a beer' link on the right
+  let buyMeABeer = document.createElement('a')
+  buyMeABeer.href = 'https://vzakharov.github.io/buy-me-a-beer'
+  buyMeABeer.target = '_blank'
+  buyMeABeer.textContent = 'Buy me a 🍺'
+  buyMeABeer.style.cssText = 'margin-top: 10px; text-decoration: none; color: #888; float: right;'
+  modalFooter.appendChild(buyMeABeer)
 
   document.body.appendChild(modalBackground)
 

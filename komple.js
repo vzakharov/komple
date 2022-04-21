@@ -391,7 +391,8 @@ function getPrompt(element = getCurrentElement()) {
     } = selection
     // Split the selection before and after the caret, assigning the values to input and suffix, respectively
     input = anchorNode.textContent.slice(0, anchorOffset).trimEnd()
-    suffix = ' ' + focusNode.textContent.slice(focusOffset).trimStart()
+    suffix = focusNode.textContent.slice(focusOffset).trimStart()
+    if ( suffix) suffix = ' ' + suffix
   } else {
     feeder = input = builder?.feeder || ''
   }
@@ -400,7 +401,7 @@ function getPrompt(element = getCurrentElement()) {
   try {
     prompt = builder ?
       typeof builder === 'function' ?
-        builder(input)
+        builder({ input, feeder, suffix })
         : ( builder.legacy ?
           getPromptFromRules(builder)  
           : scrapePrompt(builder)
@@ -415,7 +416,7 @@ function getPrompt(element = getCurrentElement()) {
   return { prompt, feeder, suffix }
 }
 
-function getTwitterPrompt(content) {
+function getTwitterPrompt({ input }) {
 
   // function to extract Twitter handle from href
   const getHandle = href => href.replace(/^.*?(\w+)$/, '@$1')
@@ -447,13 +448,13 @@ function getTwitterPrompt(content) {
   }
 
   // Add my handle to the end of the list, plus any existing content of the active element
-  output += `${myHandle}: ${content}`
+  output += `${myHandle}: ${input}`
 
   return output
 
 }
 
-function getNotionPrompt() {
+function getNotionPrompt({ input, suffix }) {
 
   try {
 
@@ -463,7 +464,13 @@ function getNotionPrompt() {
     // Replace newlines with double newlines
     prompt = prompt.replace(/\n/g, '\n\n')
 
-    return prompt    
+    // If input and suffix are present, remove everything after the input from the prompt
+    // This is a workaround (because the input can repeat several times in the prompt)
+    // console.log({ input, suffix })
+    if ( input && suffix )
+      prompt = prompt.replace(new RegExp(`(${escapeRegExp(input)})[\\s\\S]*$`), '$1')
+
+    return prompt
 
   } catch (e) {
     console.log(e)
