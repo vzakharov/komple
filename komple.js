@@ -392,10 +392,14 @@ function getPrompt(element = getCurrentElement()) {
     // Split the selection before and after the caret, assigning the values to input and suffix, respectively
     input = anchorNode.textContent.slice(0, anchorOffset).trimEnd()
     suffix = focusNode.textContent.slice(focusOffset).trimStart()
-    if ( suffix) suffix = ' ' + suffix
+  } else if ( element.tagName === 'TEXTAREA' || element.tagName === 'INPUT' ) {
+    input = element.value.slice(0, element.selectionStart).trimEnd()
+    suffix = element.value.slice(element.selectionEnd).trimStart()
   } else {
     feeder = input = builder?.feeder || ''
   }
+
+  if ( suffix) suffix = ' ' + suffix
 
 
   try {
