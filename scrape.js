@@ -170,6 +170,8 @@ const scrape = {
       element = selection.anchorNode.parentElement, 
       texts = []
   
+    console.log({ selection, element, up })
+
     if ( typeof up !== 'undefined' ) {
   
       const sibling = element => element[`${up ? 'previous' : 'next'}ElementSibling`]
@@ -190,8 +192,8 @@ const scrape = {
   
           element = sibling(element)
   
-          // If the element is contenteditable, insert its textContent in the beginning of the texts array.
-          if (element.attributes.contenteditable?.value === 'true') {
+          // If the element is contenteditable or a descendant of one, insert its textContent in the beginning of the texts array.
+          if ( element.matches('[contenteditable="true"], [contenteditable="true"] *') ) {
             console.log(element, element.textContent)
             addText(element.textContent)
           }

@@ -418,7 +418,7 @@ function getPrompt(element = getCurrentElement()) {
     }
   } catch (e) {
     console.log('Error:', e)
-    prompt = input
+    ;( { prompt, suffix } = scrape.default() )
   }
 
   // Remove all {{...}} bits from the prompt
