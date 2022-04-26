@@ -11,7 +11,7 @@
           "http://*/*",
           "https://*/*"
           ],
-      "js": ["lodashish.js", "settings.js", "komple.js", "ui.js", "scrape.js"],
+      "js": ["lodashish.js", "settings.js", "scrape.js", "ui.js", "komple.js" ],
       "run_at": "document_end"
       }
   ], 

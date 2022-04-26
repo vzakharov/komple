@@ -300,9 +300,8 @@ function startThinking(action = 'Completing') {
 function getPrompt(element = getCurrentElement()) {
   let builders = {
     'twitter.com': getTwitterPrompt,
-    'notion.so': getNotionPrompt,
     'reddit.com': {
-      legacy: true,
+      scraperVersion: 'v1',
       pieces: {
         author: {
           selector: '[data-click-id="user"]',
@@ -364,6 +363,7 @@ function getPrompt(element = getCurrentElement()) {
       u/%self%:`
     },
     'mail.google.com': {
+      scraperVersion: 'v2',
       stop: {
         selector: 'h2' // Stop at conversation title
       },
@@ -371,6 +371,7 @@ function getPrompt(element = getCurrentElement()) {
       whatIsInputed: 'user reply',
     },
     'quora.com': {
+      scraperVersion: 'v2',
       whatIsScraped: 'question',
       whatIsInputed: 'insightful answer',
       instruction: 'Here is an insightful answer on Quora',
@@ -402,14 +403,19 @@ function getPrompt(element = getCurrentElement()) {
   if ( suffix) suffix = ' ' + suffix
 
   try {
-    prompt = builder ?
-      typeof builder === 'function' ?
-        builder({ input, feeder, suffix })
-        : ( builder.legacy ?
-          getPromptFromRules(builder)  
-          : scrapePrompt(builder)
-        ) + input
-      : scrapePrompt() + input
+
+    prompt = typeof builder === 'function' ?
+      builder({ input, feeder, suffix })
+      : (
+        scrape[builder?.scraperVersion || 'default'](builder)
+      )
+    
+    // If it's an object, it will return { prompt, suffix }, which we need to reassign
+    if ( typeof prompt === 'object' ) {
+      ({ prompt, suffix } = prompt)
+    } else {
+      prompt += input
+    }
   } catch (e) {
     console.log('Error:', e)
     prompt = input
@@ -455,33 +461,9 @@ function getTwitterPrompt({ input }) {
   }
 
   // Add my handle to the end of the list, plus any existing content of the active element
-  output += `${myHandle}: ${input}`
+  output += `${myHandle}: `
 
   return output
-
-}
-
-function getNotionPrompt({ input, suffix }) {
-
-  try {
-
-    // Remove 'Add icon\nAdd cover\nAdd comment\n' from the beginning of the active element's innerText
-    let prompt = document.activeElement.innerText.replace(/^Add icon\nAdd cover\nAdd comment\n/, '')
-
-    // Replace newlines with double newlines
-    prompt = prompt.replace(/\n/g, '\n\n')
-
-    // If input and suffix are present, remove everything after the input from the prompt
-    // This is a workaround (because the input can repeat several times in the prompt)
-    // console.log({ input, suffix })
-    if ( input && suffix )
-      prompt = prompt.replace(new RegExp(`(${escapeRegExp(input)})[\\s\\S]*$`), '$1')
-
-    return prompt
-
-  } catch (e) {
-    console.log(e)
-  }
 
 }
 
@@ -510,94 +492,6 @@ function testObject(object, test) {
   }
   return true
 }
-
-function getPromptFromRules(crawlRules) {
-
-  let finalOutput = crawlRules.output
-
-  for ( let key in crawlRules.pieces ) {
-    let piece = crawlRules.pieces[key]
-    let { selector, last, property, many, crawl, stop, extract, replace, output } = piece
-
-    let text = ''
-
-    if ( !crawl ) {
-
-      let elements = document.querySelectorAll(selector)
-      let element = last ? elements[elements.length - 1] : elements[0]
-      text = getText(element, piece)
-
-    } else {
-
-      let items = many && [{}]
-      let item = items?.[0] || {}
-
-      let element = getCurrentElement()
-
-      while ( true ) {
-
-        // Go to previous sibling
-        let { previousElementSibling, parentElement } = element
-
-        if ( previousElementSibling ) {
-          element = previousElementSibling
-          // Go to the deepest last descendant of the element
-          while ( element.lastElementChild ) {
-            element = element.lastElementChild
-          }
-        } else // Go to parent
-          element = parentElement
-
-        // If we've reached the stop element or the top of the document, stop
-        if ( testObject(element, stop) || !element )
-          break
-        
-        // Check if the element matches any of the test attributes
-        for ( let key in extract ) {
-          
-          if ( testObject(element, extract[key].test) )
-            item[key] = getText(element, extract[key])
-
-        }
-
-        // If all extract selectors have been found: if many, add a new item to the array, else break out
-        if ( Object.keys(item).length === Object.keys(extract).length ) {
-          if ( many )
-            items.push(item = {})
-          else
-            break
-        }
-
-      }
-
-      // Reverse items
-      items = items.reverse()
-
-      // If the first item is incomplete, remove it
-      if ( Object.keys(items[0]).length !== Object.keys(extract).length )
-        items.shift()
-
-      // Convert items to text
-      text = ( 
-        many ? items : [ item ]
-      ).map(item => {
-        let text = output
-        for ( let key in item ) {
-          text = text.replace(`%${key}%`, item[key])
-        }
-        return text
-      }).join('')
-
-    }
-
-    finalOutput = finalOutput.replace(`%${key}%`, text)
-  }
-
-  console.log(finalOutput)
-
-  return finalOutput
-}
-
 
 function setCaretPosition(element, position) {
 
