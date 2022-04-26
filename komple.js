@@ -401,7 +401,6 @@ function getPrompt(element = getCurrentElement()) {
 
   if ( suffix) suffix = ' ' + suffix
 
-
   try {
     prompt = builder ?
       typeof builder === 'function' ?
@@ -416,7 +415,11 @@ function getPrompt(element = getCurrentElement()) {
     prompt = input
   }
 
+  // Remove all {{...}} bits from the prompt
+  prompt = prompt.replace(/\{\{[^}]+\}\}/g, '')
+
   console.log('Prompt:', prompt)
+
   return { prompt, feeder, suffix }
 }
 
