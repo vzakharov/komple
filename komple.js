@@ -163,6 +163,11 @@ function enable() {
     console.log('Loaded settings:', settings)
   })
 
+  // Listen to chrome storage to update settings
+  chrome.storage.onChanged.addListener(({ settings }) => {
+    // console.log('Settings changed:', settings)
+    Object.assign(settings, settings.newValue)
+  })
 }
 
 function disable() {
@@ -400,7 +405,7 @@ function getPrompt(element = getCurrentElement()) {
     feeder = input = builder?.feeder || ''
   }
 
-  if ( suffix) suffix = ' ' + suffix
+  if ( suffix ) suffix = ' ' + suffix
 
   try {
 
@@ -413,6 +418,8 @@ function getPrompt(element = getCurrentElement()) {
     // If it's an object, it will return { prompt, suffix }, which we need to reassign
     if ( typeof prompt === 'object' ) {
       ({ prompt, suffix } = prompt)
+      suffix = suffix.trimRight()
+      prompt = prompt.trim()
     } else {
       prompt += input
     }
@@ -421,10 +428,27 @@ function getPrompt(element = getCurrentElement()) {
     ;( { prompt, suffix } = scrape.default() )
   }
 
-  // Remove all {{...}} bits from the prompt
-  prompt = prompt.replace(/\{\{[^}]+\}\}/g, '')
+  process = text => {  
+    if (!text) return
+    // Remove all {{...}} bits
+    text = text.replace(/\{\{[\s\S]+?\}\}/g, '')
+    // Replace any number of newlines with 2
+    text = text.replace(/\n+/g, '\n\n')
+    text = text.trimRight()
+    return text
+  }
+
+  prompt = process(prompt)
+  suffix = process(suffix)
+
+  // Remove everything in the prompt before and including '//start'
+  prompt = prompt.split('\n//start').pop()
+
+  // Remove everything in the suffix after and including '//stop'
+  if ( suffix) suffix = suffix.split('\n//stop').shift()
 
   console.log('Prompt:', prompt)
+  console.log('Suffix:', suffix)
 
   return { prompt, feeder, suffix }
 }
@@ -548,5 +572,6 @@ function saveSettings() {
     console.log('Saved config to chrome storage:', settings)
   })
 }
+
 
 enable()

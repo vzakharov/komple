@@ -2,18 +2,28 @@
   "name": "Komple",
   "description": "Autocomplete with large language models on (almost) any web page",
   "version": "0.1",
+  "icons": {
+    "128": "icon128.png"
+  },  
   "permissions": [
       "tabs","<all_urls>","webRequest","storage"
   ],
+  "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'",
   "content_scripts": [
       {
       "matches": [
           "http://*/*",
           "https://*/*"
           ],
-      "js": ["lodashish.js", "settings.js", "scrape.js", "ui.js", "komple.js" ],
+      "js": [
+        "lodashish.js", "settings.js", "scrape.js", "ui.js", "komple.js"
+      ],
       "run_at": "document_end"
       }
   ], 
+  "browser_action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon128.png"
+  },
   "manifest_version": 2
 }

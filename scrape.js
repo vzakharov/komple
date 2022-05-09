@@ -167,45 +167,42 @@ const scrape = {
 
     let 
       selection = getSelection(),
-      element = selection.anchorNode.parentElement, 
-      texts = []
+      node = selection.anchorNode, 
+      text = up ? 
+        node.textContent.substring(0, selection.anchorOffset) : 
+        node.textContent.substring(selection.focusOffset)
   
-    console.log({ selection, element, up })
+    console.log({ selection, element: node, up })
 
     if ( typeof up !== 'undefined' ) {
   
-      const sibling = element => element[`${up ? 'previous' : 'next'}ElementSibling`]
-      const addText = text => texts[up ? 'unshift' : 'push'](text)
-  
-      // First, add the text from the element itself, cutting it at either anchor or focus node and adding the respective text.
-      addText(
-        element.textContent.slice(
-          ...up ? 
-            [ 0, selection.anchorOffset ] :
-            [ selection.focusOffset ]
-        )
-      )
-  
+      const sibling = element => element[`${up ? 'previous' : 'next'}Sibling`]
+      const addTextFromNode = node => {
+        let newLineIfNeeded = [ 'BR', 'P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6' ].includes(node.nodeName) ? '\n' : ''
+        text =
+          up ?
+            `${newLineIfNeeded}${node.textContent}${text}` :
+            `${text}${newLineIfNeeded}${node.textContent}`
+      }
+   
       outerLoop: while (true) {
   
-        while (sibling(element)) {
+        while (sibling(node)) {
   
-          element = sibling(element)
-  
-          // If the element is contenteditable or a descendant of one, insert its textContent in the beginning of the texts array.
-          if ( element.matches('[contenteditable="true"], [contenteditable="true"] *') ) {
-            console.log(element, element.textContent)
-            addText(element.textContent)
+          node = sibling(node)
+
+          // If the element is a text node or contenteditable or a descendant of one, insert its textContent in the beginning of the text.
+          if ( node.nodeType === Node.TEXT_NODE || node.matches?.('[contenteditable="true"], [contenteditable="true"] *') ) {
+            // console.log(element, element.textContent)
+            addTextFromNode(node)
           }
   
   
-          // If it is not, but any of its descendants are, add  their combined textContent to the texts array.
+          // If it is not, but any of its descendants are, add the first descendant's textContent to the text.
           else {
-            let editableDescendants = Array.from(element.querySelectorAll('[contenteditable="true"]'))
-            if (editableDescendants.length) {
-              let combinedText = editableDescendants.reduce((acc, el) => acc + el.textContent, '')
-              console.log(element, editableDescendants, combinedText)
-              addText(combinedText)
+            let editableDescendant = node.querySelector('[contenteditable="true"]')
+            if (editableDescendant) {
+              addTextFromNode(editableDescendant)
             } else {
               // If no descendants are contenteditable, stop the outer loop.
               break outerLoop
@@ -215,15 +212,15 @@ const scrape = {
         }
   
         // Go to the deepest parent that has a previous sibling
-        while (!sibling(element)) {
-          element = element.parentElement
-          if (!element)
+        while (!sibling(node)) {
+          node = node.parentElement
+          if (!node)
             break outerLoop
         }
   
       }
   
-      return texts.join('\n')
+      return text
     } else {
   
       let [ prompt, suffix ] = [ 1, 0 ].map(scrape.v3)
