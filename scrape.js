@@ -82,7 +82,7 @@ const scrape = {
       finalOutput = finalOutput.replace(`%${key}%`, text)
     }
   
-    console.log(finalOutput)
+    // console.log(finalOutput)
   
     return finalOutput
   },
@@ -180,7 +180,7 @@ const scrape = {
         node.textContent.substring(0, selection.anchorOffset) : 
         node.textContent.substring(selection.focusOffset)
   
-    console.log({ selection, element: node, up })
+    // console.log({ selection, element: node, up })
 
     if ( typeof up !== 'undefined' ) {
   

@@ -13,7 +13,7 @@ let modifierPressed = null
 
 function isHotkey(keydownEvent, hotkeyName) {
   const { key, modifier } = settings.hotkeys[hotkeyName]
-  console.log(key, modifier, modifierPressed)
+  // console.log(key, modifier, modifierPressed)
   return key === keydownEvent.key && modifierPressed === modifier
 }
 
@@ -44,7 +44,7 @@ const autocompleteListener = ( e ) => {
       autocompleteTimer = setTimeout(
         () => autocomplete(),
         500),
-        console.log('Autocomplete timer started')
+        // console.log('Autocomplete timer started')
     // if a non-hanging character is typed, cancel the autocomplete timer
     } else {
       if ( autocompleteTimer || autocompleteInProgress )
@@ -83,7 +83,7 @@ const pickerListener = ( e ) => {
 
     if ( apiPicker || configVisible ) {
       apiPicker?.remove()
-      console.log({ configVisible })
+      // console.log({ configVisible })
       if ( configVisible )
         configModal.style.display = 'none'
     } else  {
@@ -117,7 +117,7 @@ const pickerListener = ( e ) => {
         // Add listener for alt+numeric keys that will select the corresponding API
         let nextListener = ['keydown', event => {
           let { key } = event
-          console.log('Picker listener:', key)
+          // console.log('Picker listener:', key)
           // If no API picker exists, delete the listener and return
           if ( !document.getElementById('komple-api-picker') )
             return document.removeEventListener(...nextListener)
@@ -186,11 +186,11 @@ function enable() {
 
   // Load extension config from chrome storage
   chrome.storage.sync.get('settings', data => {
-    console.log('Loaded config from chrome storage:', data.settings)
+    // console.log('Loaded config from chrome storage:', data.settings)
     if ( data.settings )
       for ( let key in settings )
         settings[key] = data.settings[key]
-    console.log('Loaded settings:', settings)
+    // console.log('Loaded settings:', settings)
   })
 
   // Listen to chrome storage to update settings
@@ -248,7 +248,7 @@ function createDivUnderCurrentElement(attributes, callback) {
   div.style.color = 'rgba(0,0,0,0.7)'
 
   let currentElement = getCurrentElement()
-  console.log('currentElement:', currentElement)
+  // console.log('currentElement:', currentElement)
   let { bottom, left } = currentElement.getBoundingClientRect()
   div.style.top = bottom + 'px'
   div.style.left = left + 'px'
@@ -280,7 +280,7 @@ async function autocomplete() {
   // Assign a random id to this autocomplete
   let id = Math.random().toString(36).substring(2, 15)
   autocompleteInProgress = id
-  console.log('Autocomplete started, id = ' + id)
+  // console.log('Autocomplete started, id = ' + id)
 
   // // Get the deepest matching child.
   // let element = deepestMatchingChild(document.activeElement)
@@ -425,7 +425,7 @@ function getPrompt(element = getCurrentElement()) {
 
   let host = document.location.hostname.replace(/^(www\.)?/, '')
   let builder = builders[host]
-  console.log('Builder:', builder)
+  // console.log('Builder:', builder)
   let prompt, input, feeder, suffix
   if ( element.textContent ) {
     // Get the selection
@@ -573,7 +573,7 @@ async function simulateTextInput(text) {
   // document.execCommand('insertText', false, text)
   // Split by newlines, exec insertText for each line, plus insertParagraph between each
   let lines = text.split(/\n+/)
-  console.log('Lines:', lines)
+  // console.log('Lines:', lines)
   while ( lines.length ) {
     document.execCommand('insertText', false, lines.shift())
     if ( lines.length )
@@ -588,7 +588,7 @@ async function getSuggestion(text, { suffix }) {
       endpoint, auth, promptKey, otherBodyParams, arrayKey, resultKey, suffixKey
     } = settings.api
 
-    console.log({suffixKey, suffix})
+    // console.log({suffixKey, suffix})
     // Get the suggestion from the external API.
     let json = await(
       await fetch(
@@ -617,7 +617,7 @@ async function getSuggestion(text, { suffix }) {
 function saveSettings() {
   // Save to chrome storage
   chrome.storage.sync.set({ settings }, () => {
-    console.log('Saved config to chrome storage:', settings)
+    // console.log('Saved config to chrome storage:', settings)
   })
 }
 
