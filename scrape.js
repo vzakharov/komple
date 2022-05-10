@@ -165,6 +165,14 @@ const scrape = {
 
   v3(up) {
 
+    let element = document.activeElement
+
+    if ( element.tagName === 'TEXTAREA' || element.tagName === 'INPUT' ) {
+      let prompt  = element.value.slice(0, element.selectionStart).trimEnd()
+      let suffix = element.value.slice(element.selectionEnd).trimStart()
+      return { prompt, suffix }
+    }
+
     let 
       selection = getSelection(),
       node = selection.anchorNode, 

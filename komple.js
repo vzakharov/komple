@@ -86,76 +86,82 @@ const pickerListener = ( e ) => {
       console.log({ configVisible })
       if ( configVisible )
         configModal.style.display = 'none'
-    } else 
-      getCurrentElement()?.isContentEditable ? 
-        apiPicker = createDivUnderCurrentElement({ id: 'komple-api-picker' }, div => {
+    } else  {
+      // If current element is not contenteditable or an input/textarea, return.
+      let currentElement = getCurrentElement()
+      if ( !currentElement.isContentEditable && !currentElement.matches('input, textarea') )
+        return
+      
+      apiPicker = createDivUnderCurrentElement({ id: 'komple-api-picker' }, div => {
 
-          let index = 0
+        let index = 0
+
+        // 'Choose an API'
+        div.appendChild(document.createElement('div')).innerHTML = '<b>Choose an API</b>'
+        let { modifier } = settings.hotkeys.apiPicker
+
+        const kbd = key => `<kbd style="background-color: #ccc; color: #000;">${key}</kbd>`
+
+        for ( let api of settings.apis ) {
+
+          index++
+          let apiDiv = document.createElement('div')
+          apiDiv.innerHTML = `${kbd(index)} ${api.name}`
+          apiDiv.className = 'komple-api-picker-item'
+          apiDiv.style['font-weight'] = api === settings.api ? 'bold' : 'normal'
+          apiDiv.style['margin-bottom'] = '5px'
+
+          div.appendChild(apiDiv)
+        }
+
+        // Add listener for alt+numeric keys that will select the corresponding API
+        let nextListener = ['keydown', event => {
+          let { key } = event
+          console.log('Picker listener:', key)
+          // If no API picker exists, delete the listener and return
+          if ( !document.getElementById('komple-api-picker') )
+            return document.removeEventListener(...nextListener)
           
-          // 'Choose an API'
-          div.appendChild(document.createElement('div')).innerHTML = '<b>Choose an API</b>'
-          let { modifier } = settings.hotkeys.apiPicker
-
-          for ( let api of settings.apis ) {
-
-            index++
-            let apiDiv = document.createElement('div')
-            apiDiv.innerHTML = `<kbd style="background-color: #ccc;">${index}</kbd> ${api.name}`
-            apiDiv.className = 'komple-api-picker-item'
-            apiDiv.style['font-weight'] = api === settings.api ? 'bold' : 'normal'
-            apiDiv.style['margin-bottom'] = '5px'
-
-            div.appendChild(apiDiv)
+          if ( key.match(/^[1-9]$/) ) {
+            settings.currentApiName = settings.apis[key - 1].name
+            saveSettings()
+            autocomplete()
+          }
+          
+          if ( key === 'c' ) {
+            navigator.clipboard.writeText(getPrompt().prompt)
           }
 
-          // Add listener for alt+numeric keys that will select the corresponding API
-          let nextListener = ['keydown', event => {
-            let { key } = event
-            console.log('Picker listener:', key)
-            // If no API picker exists, delete the listener and return
-            if ( !document.getElementById('komple-api-picker') )
-              return document.removeEventListener(...nextListener)
-            
-            if ( key.match(/^[1-9]$/) ) {
-              settings.currentApiName = settings.apis[key - 1].name
-              saveSettings()
-              autocomplete()
-            }
-            
-            if ( key === 'c' ) {
-              navigator.clipboard.writeText(getPrompt().prompt)
-            }
+          removeApiPicker()
+          event.preventDefault()
+        }]
 
+        let copyDiv = document.createElement('div')
+        copyDiv.innerHTML = `${kbd('C')} Copy current prompt`
+        div.appendChild(copyDiv)
+
+        let keyupListener = ['keyup', e => {
+          if ( e.key === modifier )
             removeApiPicker()
-            event.preventDefault()
-          }]
+        }]
 
-          let copyDiv = document.createElement('div')
-          copyDiv.innerHTML = '<kbd style="background-color: #ccc;">c</kbd> Copy prompt to clipboard'
-          div.appendChild(copyDiv)
-
-          let keyupListener = ['keyup', e => {
-            if ( e.key === modifier )
-              removeApiPicker()
-          }]
-
-          function removeApiPicker() {
-            apiPicker.remove()
-            document.removeEventListener(...nextListener)
-            document.removeEventListener('click', removeApiPicker)
-            document.removeEventListener(...keyupListener)
-          }
+        function removeApiPicker() {
+          apiPicker.remove()
+          document.removeEventListener(...nextListener)
+          document.removeEventListener('click', removeApiPicker)
+          document.removeEventListener(...keyupListener)
+        }
 
 
-          document.addEventListener(...nextListener)
+        document.addEventListener(...nextListener)
 
 
-          // Remove the API picker when the user clicks anywhere in the document
-          document.addEventListener('click', removeApiPicker)
-          document.addEventListener(...keyupListener)
+        // Remove the API picker when the user clicks anywhere in the document
+        document.addEventListener('click', removeApiPicker)
+        document.addEventListener(...keyupListener)
 
-        }) 
-        : toggleConfigModal()
+      })
+    }
   }
 }
 
@@ -225,6 +231,10 @@ function deepestMatchingChild(element) {
 }
 
 function getCurrentElement() {
+  // If active element is a textarea or input, return that element
+  if ( ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName) )
+    return document.activeElement
+
   let { parentElement } = document.getSelection()?.focusNode
   return parentElement
 }
@@ -238,7 +248,7 @@ function createDivUnderCurrentElement(attributes, callback) {
   div.style.color = 'rgba(0,0,0,0.7)'
 
   let currentElement = getCurrentElement()
-  // console.log('currentElement:', currentElement)
+  console.log('currentElement:', currentElement)
   let { bottom, left } = currentElement.getBoundingClientRect()
   div.style.top = bottom + 'px'
   div.style.left = left + 'px'
