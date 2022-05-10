@@ -19,6 +19,13 @@
       body {
         zoom: 0.8;
       }
+      kbd {
+        font-size: 0.8em;
+        background-color: #ccc;
+      }
+      .text-light-gray {
+        color: #ccc;
+      }
     </style>
   </head>
   <body>
@@ -26,132 +33,182 @@
     <div 
       id="app"
       class="m-3"
-      style="width: 400px;"
+      style="width: 600px;"
     >
-    <!-- Select API -->
-    <div class="form-group">
-      <label for="select-api">
-        Choose an API:
-      </label>
-      <select
-        id="select-api"
-        @change="settings.currentApiName = $event.target.value"
-      >
-        <option 
-          v-for="api in settings.apis"
-          :key="api.name"
-          :value="api.name"
-          :selected="api.name === settings.currentApiName"
-          v-text="api.name"
-        />      
-      </select>
-      <!-- 
-        API fields are:
-        {
-          name: 'default',                // Arbitrary name for the API
-          endpoint: 'https://...',        // The endpoint to use for autocompletion
-          auth: 'Bearer ...',             // The authorization token to use for the API. Don't forget to add the Bearer prefix!
-          censor: false,                  // Whether to hide the above fields in the configuration modal
-          promptKey: 'prompt',            // The key to use for the prompt in the API request body
-          suffixKey: 'suffix',            // The key to use for the suffix. Leave empty if the model doesn't support it.
-          otherBodyParams: {              // Other parameters to add to the request body (number of tokens, temperature, etc.)
-            max_tokens: 50,
-            temperature: 0.6,
-            stop: '\n'
-          },
-          arrayKey: 'choices',            // Where is the array of suggestions in the response? Empty if no array is returned.
-          resultKey: 'text'               // Where is the result text in the response?
-        }
-       -->
-      <div
-       class="py-2"
-      >
-        <!-- API name -->
-        <div class="form-group">
-          <label for="api-name">
-            API name
-          </label>
-          <input
-            type="text"
-            class="form-control"
-            id="api-name"
-            :value="api.name"
-            @input="changeApiName($event.target.value)"
-            placeholder="My API"
-          />
-          <small class="form-text text-muted">
-            Any name you want.
-          </small>
-        </div>
-        <!-- API endpoint -->
-        <div class="form-group">
-          <label for="api-endpoint">
-            API endpoint
-          </label>
-          <input
-            :type="api.censor ? 'password' : 'text'"
-            class="form-control"
-            id="api-endpoint"
-            v-model="api.endpoint"
-            placeholder="https://..."
-          />
-        </div>
-        <!-- API authorization token -->
-        <div class="form-group">
-          <label for="api-auth">
-            API authorization token
-          </label>
-          <input
-            :type="api.censor ? 'password' : 'text'"
-            class="form-control"
-            id="api-auth"
-            v-model="api.auth"
-            placeholder="Bearer sk-..."
-          />
-        </div>
-        <!-- Whether to hide the above fields -->
-        <div class="form-group">
-          <div class="form-check">
-            <input
-              type="checkbox"
-              class="form-check-input switch"
-              id="api-censor"
-              v-model="api.censor"
-            />
-            <label for="api-censor">
-              Hide API fields
-            </label>
-          </div>
-        </div>
-        <!-- API prompt, suffix, array, result keys -->
-        <div class="form-group"
-          v-for="key in ['prompt', 'suffix', 'array', 'result']"
+      <ul class="nav nav-tabs mb-4">
+        <li class="nav-item"
+          v-for="tab in [
+            { id: 'api', name: 'API' },
+            { id: 'params', name: 'Generation parameters' },
+          ]"
+          :key="tab.id"
         >
-          <label :for="`api-${key}`">
-            {{ key }} key
-          </label>
-          <input
-            type="text"
-            class="form-control"
-            :id="`api-${key}`"
-            v-model="api[key+'Key']"
-            :placeholder="'e.g. ' + {
-              prompt: 'prompt',
-              suffix: 'suffix',
-              array: 'choices',
-              result: 'text'
-            }[key]"
-          />
-          <small class="form-text text-muted"
-            v-if="['suffix', 'array'].includes(key)"
+          <a 
+            :class="{
+              'nav-link': true,
+              active: tab.id === settings.activeTab,
+            }"
+            @click="$set(settings, 'activeTab', tab.id)"
+            href="#"
           >
-            Leave empty if {{ key === 'suffix' ? 'the model doesn\'t support text insertion' : 'the API doesn\'t return an array' }}
-          </small>
-        </div>              
-      </div>    
+            {{ tab.name }}
+          </a>
+        </li>      
+      </ul>
+      <!-- Flex container -->
+      <div class="container">
+        <div class="row">
+          <div class="col-4" v-if="['api', 'params'].includes(settings.activeTab)">
+            <div class="list-group"
+              @keydown.down.prevent.exact="api = settings.apis[currentApiIndex() + 1] || settings.apis[0]"
+              @keydown.up.prevent.exact="api = settings.apis[currentApiIndex() - 1] || settings.apis[settings.apis.length - 1]"
+              @keydown.ctrl.down.prevent="nudge(+1)"
+              @keydown.ctrl.up.prevent="nudge(-1)"
+              tabindex="0"
+            >
+              <a class="list-group-item"
+                href="#"
+                v-for="api, index in settings.apis"
+                :key="api.name"
+                :class="{
+                  'list-group-item list-group-item-action': true,
+                  active: api.name === settings.currentApiName,
+                }"
+                @click="vm.api = api"
+                tabindex="-1"
+              >
+                {{ api.name }}
+              </a>
+            </div>
+            <!-- Muted text: ctrl+up/down to move items -->
+            <div class="text-light-gray mt-2 small">
+              <kbd>Ctrl</kbd> + <kbd>▲▼</kbd> to move
+            </div>
+            
+          </div>
+          <div class="col-8" v-if="['api', 'params'].includes(settings.activeTab)">
+            <!-- 
+              API fields are:
+              {
+                name: 'default',                // Arbitrary name for the API
+                endpoint: 'https://...',        // The endpoint to use for autocompletion
+                auth: 'Bearer ...',             // The authorization token to use for the API. Don't forget to add the Bearer prefix!
+                censor: false,                  // Whether to hide the above fields in the configuration modal
+                promptKey: 'prompt',            // The key to use for the prompt in the API request body
+                suffixKey: 'suffix',            // The key to use for the suffix. Leave empty if the model doesn't support it.
+                otherBodyParams: {              // Other parameters to add to the request body (number of tokens, temperature, etc.)
+                  max_tokens: 50,
+                  temperature: 0.6,
+                  stop: '\n'
+                },
+                arrayKey: 'choices',            // Where is the array of suggestions in the response? Empty if no array is returned.
+                resultKey: 'text'               // Where is the result text in the response?
+              }
+            -->
+            <div
+              v-show="settings.activeTab === 'api'"
+            >
+              <!-- API name -->
+              <div class="form-group">
+                <label for="api-name">
+                  API name
+                </label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="api-name"
+                  :value="api.name"
+                  @input="changeApiName($event.target.value)"
+                  placeholder="My API"
+                />
+                <small class="form-text text-muted">
+                  Any name you want.
+                </small>
+              </div>
+              <!-- API endpoint -->
+              <div class="form-group">
+                <label for="api-endpoint">
+                  API endpoint
+                </label>
+                <input
+                  :type="api.censor ? 'password' : 'text'"
+                  class="form-control"
+                  id="api-endpoint"
+                  v-model="api.endpoint"
+                  placeholder="https://..."
+                />
+              </div>
+              <!-- API authorization token -->
+              <div class="form-group">
+                <label for="api-auth">
+                  API authorization token
+                </label>
+                <input
+                  :type="api.censor ? 'password' : 'text'"
+                  class="form-control"
+                  id="api-auth"
+                  v-model="api.auth"
+                  placeholder="Bearer sk-..."
+                />
+              </div>
+              <!-- Whether to hide the above fields -->
+              <div class="form-group">
+                <div class="form-check">
+                  <input
+                    type="checkbox"
+                    class="form-check-input switch"
+                    id="api-censor"
+                    v-model="api.censor"
+                  />
+                  <label for="api-censor">
+                    Hide API fields
+                  </label>
+                </div>
+              </div>
+              <!-- API prompt, suffix, array, result keys -->
+              <div class="form-group"
+                v-for="key in ['prompt', 'suffix', 'array', 'result']"
+              >
+                <label :for="`api-${key}`">
+                  {{ key }} key
+                </label>
+                <input
+                  type="text"
+                  class="form-control"
+                  :id="`api-${key}`"
+                  v-model="api[key+'Key']"
+                  :placeholder="'e.g. ' + {
+                    prompt: 'prompt',
+                    suffix: 'suffix',
+                    array: 'choices',
+                    result: 'text'
+                  }[key]"
+                />
+                <small class="form-text text-muted"
+                  v-if="['suffix', 'array'].includes(key)"
+                >
+                  Leave empty if {{ key === 'suffix' ? 'the model doesn\'t support text insertion' : 'the API doesn\'t return an array' }}
+                </small>
+              </div>              
+            </div>   
+            <!-- API parameters -->
+            <div
+              v-show="settings.activeTab === 'params'"
+            >
+              <!-- Monospace textarea -->
+              <textarea
+                class="form-control"
+                style="font-family: monospace"
+                rows="10"
+                id="api-params"
+                v-model="stringifiedApiParams"
+                placeholder="{ max_tokens: 50, temperature: 0.6, stop: '\n' }"
+              ></textarea>
+            </div>
+          </div>
+        </div>    
+      </div>
     </div>
-
-    </div>
-    <script src="popup.js" defer></script>
+  <script src="popup.js" defer></script>
   </body>
 </html>
