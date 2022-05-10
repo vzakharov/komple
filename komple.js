@@ -12,7 +12,7 @@ let autocompleteInProgress = null
 
 const autocompleteListener = ( e ) => {
   // if the hotkey is pressed, autocomplete
-  if ( e.key == settings.hotkeys.autocomplete.key && e.getModifierState(settings.hotkeys.autocomplete.modifier) ) {
+  if ( e.key == settings.hotkeys.autocomplete.key && settings.hotkeys.autocomplete.modifier && e.getModifierState(settings.hotkeys.autocomplete.modifier) ) {
     autocomplete()
   } 
   // if the activateOnHangingChar setting is on, autocomplete after a hanging character is typed

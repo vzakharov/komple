@@ -1,4 +1,5 @@
 <!-- Komple settings -->
+<!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8">
@@ -17,7 +18,7 @@
         font-weight: 500;
       }
       body {
-        zoom: 0.8;
+        zoom: 0.75;
       }
       kbd {
         font-size: 0.8em;
@@ -40,13 +41,15 @@
           v-for="tab in [
             { id: 'api', name: 'API' },
             { id: 'params', name: 'Generation parameters' },
+            { id: 'hotkeys', name: 'Hotkeys' },
+            { id: 'json', name: 'Import/export' },
           ]"
           :key="tab.id"
         >
           <a 
             :class="{
               'nav-link': true,
-              active: tab.id === settings.activeTab,
+              active: tab.id === activeTab,
             }"
             @click="$set(settings, 'activeTab', tab.id)"
             href="#"
@@ -55,10 +58,10 @@
           </a>
         </li>      
       </ul>
-      <!-- Flex container -->
+      <!-- Flex container for API settings -->
       <div class="container">
         <div class="row">
-          <div class="col-4" v-if="['api', 'params'].includes(settings.activeTab)">
+          <div class="col-4" v-if="['api', 'params'].includes(activeTab)">
             <div class="list-group"
               @keydown.down.prevent.exact="api = settings.apis[currentApiIndex() + 1] || settings.apis[0]"
               @keydown.up.prevent.exact="api = settings.apis[currentApiIndex() - 1] || settings.apis[settings.apis.length - 1]"
@@ -79,14 +82,21 @@
               >
                 {{ api.name }}
               </a>
+              <!-- Add new -->
+              <a class="list-group-item list-group-item-action"
+                href="#"
+                @click="addApi()"
+              >
+                <em>Add new</em>
+              </a>
             </div>
             <!-- Muted text: ctrl+up/down to move items -->
             <div class="text-light-gray mt-2 small">
-              <kbd>Ctrl</kbd> + <kbd>▲▼</kbd> to move
+              <kbd>Ctrl</kbd> + <kbd>▲▼</kbd> to reorder
             </div>
             
           </div>
-          <div class="col-8" v-if="['api', 'params'].includes(settings.activeTab)">
+          <div class="col-8" v-if="['api', 'params'].includes(activeTab)">
             <!-- 
               API fields are:
               {
@@ -106,7 +116,7 @@
               }
             -->
             <div
-              v-show="settings.activeTab === 'api'"
+              v-show="activeTab === 'api'"
             >
               <!-- API name -->
               <div class="form-group">
@@ -125,6 +135,23 @@
                   Any name you want.
                 </small>
               </div>
+
+              <!-- Buttons to delete/clone the API -->
+              <button
+                v-for="caption, action in {
+                  deleteApi: 'Delete',
+                  cloneApi: 'Clone',
+                }"
+                :class="{
+                  'btn me-1 mb-2 btn-sm': true,
+                  'btn-outline-danger': action === 'deleteApi',
+                  'btn-outline-secondary': action === 'cloneApi',
+                }"
+                @click="vm[action]"
+              >
+                {{ caption }}
+              </button>
+
               <!-- API endpoint -->
               <div class="form-group">
                 <label for="api-endpoint">
@@ -193,7 +220,7 @@
             </div>   
             <!-- API parameters -->
             <div
-              v-show="settings.activeTab === 'params'"
+              v-show="activeTab === 'params'"
             >
               <!-- Monospace textarea -->
               <textarea
@@ -208,7 +235,117 @@
           </div>
         </div>    
       </div>
+      <!-- Hotkeys section -->
+      <div
+        v-show="activeTab === 'hotkeys'"
+      >
+        <!-- Table: action (with description), modifier, key -->
+        <table class="table table-sm">
+          <thead>
+            <tr
+              class="thead-dark"
+            >
+              <th scope="col">Action</th>
+              <th scope="col">Hotkey</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="hotkey, action in settings.hotkeys"
+              :key="action"
+            >
+              <td v-text="{
+                autocomplete: 'Autocomplete',
+                apiPicker: 'Pick API',
+              }[action]"/>
+              <td>
+                <!-- An input that listens to keydown events -->
+                <input
+                  type="text"
+                  class="form-control"
+                  :value="`${hotkey.modifier}+${hotkey.key === ' ' ? 'Space' : hotkey.key}`"
+                  readonly
+                  @keydown="
+                    // If it's a tab or a shift, don't do anything
+                    if (['Tab', 'Shift'].includes($event.key))
+                      return
+
+                    // If the key is a modifier, set the modifier and clear the key
+                    if ( ['Control', 'Shift', 'Alt', 'Meta'].includes($event.key) ) {
+                      hotkey.modifier = $event.key
+                      hotkey.key = ''
+                    } else {
+                      hotkey.key = $event.key
+                    }
+
+                    // Prevent the default action
+                    $event.preventDefault()
+                  "
+                  @keyup.prevent="
+                    // If no key is set, clear the modifier too
+                    if ( !hotkey.key ) {
+                      hotkey.modifier = ''
+                    }
+                  "
+                  @keypress.prevent
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <!-- Switch to activate on a hanging character -->
+        <div class="form-check form-switch">
+          <input
+            type="checkbox"
+            class="form-check-input"
+            id="activate-on-hanging-char"
+            v-model="settings.activateOnHangingChar"
+          />
+          <label for="activate-on-hanging-char">
+            Activate on a hanging character
+          </label>
+          <p class="form-text text-muted small">
+            If checked, the autocomplete will be activated on a hanging character like space, comma, etc. WARNING: This can cause your tokens to deplete quickly.
+          </p>
+        </div>
+      </div>
+      <!-- JSON section -->
+      <div
+        v-show="activeTab === 'json'"
+      >
+        <!-- A textarea with all the settings as JSON -->
+        <textarea
+          class="form-control"
+          style="font-family: monospace"
+          rows="25"
+          id="json"
+          :value="JSON.stringify(settings, null, 2)"
+          @change="
+            try {
+              settings = JSON.parse($event.target.value)
+            } catch (e) {
+              console.error(e)
+              $bvToast.toast('Invalid JSON', {
+                title: 'Error',
+                variant: 'danger',
+              })
+            }
+          "
+        ></textarea>
+        <!-- Download & reset buttons -->
+        <button
+          class="btn btn-outline-secondary me-2 mt-2"
+          v-for="action, caption in {
+            Download: downloadSettings,
+            Reset: resetSettings,
+          }"
+          :key="action"
+          @click="action"
+          v-text="caption"
+          :variant="action === 'Download' ? 'outline-secondary' : 'outline-danger'"
+        />
     </div>
-  <script src="popup.js" defer></script>
+    <script src="settings.js" defer></script>
+    <script src="popup.js" defer></script>
   </body>
 </html>
