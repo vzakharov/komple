@@ -291,14 +291,14 @@ async function autocomplete() {
         // If the prompt's last character isn't alphanumeric, remove the leading space from the completion
         prompt.match(/\W$/) && completion.replace(/^\s+/, '')
 
-        // Remove any leading and trailing newlines
-        completion = completion.replace(/^\n+/, '').replace(/\n+$/, '')
-
-        // Replace any newlines (in any quantity) with a space
-        completion = completion.replace(/\n+/g, ' ')
-  
-        // Remove everything after and including the first newline
-        completion = completion.replace(/\n.*/g, '')
+        // // Remove any leading and trailing newlines
+        // completion = completion.replace(/^\n+/, '').replace(/\n+$/, '')
+        // 
+        // // Replace any newlines (in any quantity) with a space
+        // completion = completion.replace(/\n+/g, ' ')
+        // 
+        // // Remove everything after and including the first newline
+        // completion = completion.replace(/\n.*/g, '')
   
         console.log('Completion:', completion)
   
@@ -558,9 +558,17 @@ function setCaretPosition(element, position) {
 
 }
 
-function simulateTextInput(text) {
+async function simulateTextInput(text) {
 
-  document.execCommand('insertText', false, text)
+  // document.execCommand('insertText', false, text)
+  // Split by newlines, exec insertText for each line, plus insertParagraph between each
+  let lines = text.split(/\n+/)
+  console.log('Lines:', lines)
+  while ( lines.length ) {
+    document.execCommand('insertText', false, lines.shift())
+    if ( lines.length )
+      document.execCommand('insertParagraph', false, '')
+  }
 
 }
 
