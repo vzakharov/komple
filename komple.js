@@ -90,74 +90,69 @@ const pickerListener = ( e ) => {
       getCurrentElement()?.isContentEditable ? 
         apiPicker = createDivUnderCurrentElement({ id: 'komple-api-picker' }, div => {
 
-        let index = 0
-        
-        // 'Choose an API'
-        div.appendChild(document.createElement('div')).innerHTML = '<b>Choose an API</b>'
-        let { modifier } = settings.hotkeys.apiPicker
+          let index = 0
+          
+          // 'Choose an API'
+          div.appendChild(document.createElement('div')).innerHTML = '<b>Choose an API</b>'
+          let { modifier } = settings.hotkeys.apiPicker
 
-        for ( let api of settings.apis ) {
+          for ( let api of settings.apis ) {
 
-          index++
-          let apiDiv = document.createElement('div')
-          apiDiv.innerText = `[${modifier}+${index}] ${api.name}`
-          apiDiv.className = 'komple-api-picker-item'
-          apiDiv.style['font-weight'] = api === settings.api ? 'bold' : 'normal'
+            index++
+            let apiDiv = document.createElement('div')
+            apiDiv.innerHTML = `<kbd style="background-color: #ccc;">${index}</kbd> ${api.name}`
+            apiDiv.className = 'komple-api-picker-item'
+            apiDiv.style['font-weight'] = api === settings.api ? 'bold' : 'normal'
+            apiDiv.style['margin-bottom'] = '5px'
 
-          div.appendChild(apiDiv)
-        }
+            div.appendChild(apiDiv)
+          }
 
-        // Add listener for alt+numeric keys that will select the corresponding API
-        let numListener = ['keydown', event => {
-          let { key } = event
-          console.log('Picker listener:', key)
-          // If no API picker exists, delete the listener and return
-          if ( !document.getElementById('komple-api-picker') )
-            document.removeEventListener(...numListener)
-          else if ( key.match(/^[1-9]$/) && modifierPressed === modifier ) {
-            settings.currentApiName = settings.apis[key - 1].name
-            saveSettings()
+          // Add listener for alt+numeric keys that will select the corresponding API
+          let nextListener = ['keydown', event => {
+            let { key } = event
+            console.log('Picker listener:', key)
+            // If no API picker exists, delete the listener and return
+            if ( !document.getElementById('komple-api-picker') )
+              return document.removeEventListener(...nextListener)
+            
+            if ( key.match(/^[1-9]$/) ) {
+              settings.currentApiName = settings.apis[key - 1].name
+              saveSettings()
+              autocomplete()
+            }
+            
+            if ( key === 'c' ) {
+              navigator.clipboard.writeText(getPrompt().prompt)
+            }
+
             removeApiPicker()
-            autocomplete()
             event.preventDefault()
+          }]
+
+          let copyDiv = document.createElement('div')
+          copyDiv.innerHTML = '<kbd style="background-color: #ccc;">c</kbd> Copy prompt to clipboard'
+          div.appendChild(copyDiv)
+
+          let keyupListener = ['keyup', e => {
+            if ( e.key === modifier )
+              removeApiPicker()
+          }]
+
+          function removeApiPicker() {
+            apiPicker.remove()
+            document.removeEventListener(...nextListener)
+            document.removeEventListener('click', removeApiPicker)
+            document.removeEventListener(...keyupListener)
           }
-        }]
-
-        let configDiv = document.createElement('div')
-        configDiv.innerText = '[Alt+X] Configure APIs'
-
-        let copyDiv = document.createElement('div')
-        copyDiv.innerText = '[Alt+C] Copy prompt to clipboard'
-
-        // Add listener on Alt+C
-        let configListener = ['keydown', ({ key, altKey }) => {
-          if ( key === 'x' && altKey ) {
-            console.log('Configuring')
-            let configModal = document.getElementById('komple-config') || createConfigModal()
-            configModal.style.display = 'block'
-            removeApiPicker()
-          } else if ( key === 'c' && altKey ) {
-            navigator.clipboard.writeText(getPrompt().prompt)
-            removeApiPicker()
-          }
-        }]
-        document.addEventListener(...configListener)
-
-        div.appendChild(configDiv)
-        div.appendChild(copyDiv)
-
-        function removeApiPicker() {
-          apiPicker.remove()
-          document.removeEventListener(...numListener)
-          document.removeEventListener(...configListener)
-        }
-
-        document.addEventListener(...numListener)
 
 
-        // Remove the API picker when the user clicks anywhere in the document
-        document.addEventListener('click', removeApiPicker)
-        // ...or presses escape
+          document.addEventListener(...nextListener)
+
+
+          // Remove the API picker when the user clicks anywhere in the document
+          document.addEventListener('click', removeApiPicker)
+          document.addEventListener(...keyupListener)
 
         }) 
         : toggleConfigModal()
@@ -253,6 +248,9 @@ function createDivUnderCurrentElement(attributes, callback) {
   div.style.padding = '5px'
   div.style['font-family'] = 'sans-serif'
   div.style['font-size'] = '0.8em'
+
+  // Cool shadow
+  div.style.boxShadow = '0px 2px 5px -1px rgba(50, 50, 93, 0.25), 0px 1px 3px -1px rgba(0, 0, 0, 0.3) '
 
   callback?.(div)
 
