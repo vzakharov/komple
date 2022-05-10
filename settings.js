@@ -47,11 +47,6 @@ const settings = {
 
 const defaultSettings = JSON.parse(JSON.stringify(settings))
 
-function isHotkey(keydownEvent, hotkeyName) {
-  const { key, modifier } = settings.hotkeys[hotkeyName]
-  return key === keydownEvent.key && keydownEvent.getModifierState(modifier)
-}
-
 // Getter for the current API -- do not modify
 Object.defineProperty(settings, 'api', {
   get: () => settings.apis.find(api => api.name === settings.currentApiName) || settings.apis[0]

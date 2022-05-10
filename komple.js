@@ -9,12 +9,34 @@ const log = (mode, ...what) => (
 
 let autocompleteTimer = null
 let autocompleteInProgress = null
+let modifierPressed = null
+
+function isHotkey(keydownEvent, hotkeyName) {
+  const { key, modifier } = settings.hotkeys[hotkeyName]
+  console.log(key, modifier, modifierPressed)
+  return key === keydownEvent.key && modifierPressed === modifier
+}
+
+const modifierListener = ['keydown', e => {
+  if ( ['Control', 'Alt', 'Shift', 'Meta'].includes(e.key) ) {
+    // console.log('Modifier pressed:', e.key)
+    modifierPressed = e.key
+  }
+}]
+
+const clearModifierListener = ['keyup', e => {
+  if ( ['Control', 'Alt', 'Shift', 'Meta'].includes(e.key) ) {
+    // console.log('Modifier released:', modifierPressed)
+    modifierPressed = null
+  }
+}]
 
 const autocompleteListener = ( e ) => {
   // if the hotkey is pressed, autocomplete
-  if ( e.key == settings.hotkeys.autocomplete.key && settings.hotkeys.autocomplete.modifier && e.getModifierState(settings.hotkeys.autocomplete.modifier) ) {
+  if ( e.key == settings.hotkeys.autocomplete.key && settings.hotkeys.autocomplete.modifier && modifierPressed === settings.hotkeys.autocomplete.modifier ) {
     autocomplete()
   } 
+
   // if the activateOnHangingChar setting is on, autocomplete after a hanging character is typed
   else if ( settings.activateOnHangingChar ) {
     // if a hanging character is typed, start the autocomplete timer
@@ -72,12 +94,13 @@ const pickerListener = ( e ) => {
         
         // 'Choose an API'
         div.appendChild(document.createElement('div')).innerHTML = '<b>Choose an API</b>'
+        let { modifier } = settings.hotkeys.apiPicker
 
         for ( let api of settings.apis ) {
 
           index++
           let apiDiv = document.createElement('div')
-          apiDiv.innerText = `[Alt+${index}] ${api.name}`
+          apiDiv.innerText = `[${modifier}+${index}] ${api.name}`
           apiDiv.className = 'komple-api-picker-item'
           apiDiv.style['font-weight'] = api === settings.api ? 'bold' : 'normal'
 
@@ -85,15 +108,18 @@ const pickerListener = ( e ) => {
         }
 
         // Add listener for alt+numeric keys that will select the corresponding API
-        let numListener = ['keydown', ({ key, altKey }) => {
+        let numListener = ['keydown', event => {
+          let { key } = event
+          console.log('Picker listener:', key)
           // If no API picker exists, delete the listener and return
           if ( !document.getElementById('komple-api-picker') )
             document.removeEventListener(...numListener)
-          else if ( key.match(/^[1-9]$/) && altKey ) {
+          else if ( key.match(/^[1-9]$/) && modifierPressed === modifier ) {
             settings.currentApiName = settings.apis[key - 1].name
             saveSettings()
             removeApiPicker()
             autocomplete()
+            event.preventDefault()
           }
         }]
 
@@ -154,6 +180,9 @@ function enable() {
   document.addEventListener('click', cancelAutocomplete)
   document.addEventListener('keydown', escapeListener)
 
+  document.addEventListener(...modifierListener)
+  document.addEventListener(...clearModifierListener)
+
   // Load extension config from chrome storage
   chrome.storage.sync.get('settings', data => {
     console.log('Loaded config from chrome storage:', data.settings)
@@ -164,9 +193,10 @@ function enable() {
   })
 
   // Listen to chrome storage to update settings
-  chrome.storage.onChanged.addListener(({ settings }) => {
-    // console.log('Settings changed:', settings)
-    Object.assign(settings, settings.newValue)
+  chrome.storage.onChanged.addListener(event => {
+    let { newValue } = event.settings
+    Object.assign(settings, newValue)
+    console.log('Settings changed:', settings)
   })
 }
 
@@ -176,6 +206,8 @@ function disable() {
   document.removeEventListener('keydown', pickerListener)
   document.removeEventListener('click', cancelAutocomplete)
   document.removeEventListener('keydown', escapeListener)
+  document.removeEventListener(...modifierListener)
+  document.removeEventListener(...clearModifierListener)
 
 }
 
