@@ -42,7 +42,8 @@ const settings = {
                                       // after waiting for 0.5 seconds. Note that this can result in higher spend of API tokens:  
                                       // Even if you cancel the autocomplete after the timer lapses, the API will still be called.
 
-  activeTab: 'api'                    // The tab to show when opening the extension popup
+  activeTab: 'api',                   // The tab to show when opening the extension popup
+  subTab: 'general',                  // The subtab to show when opening the extension popup (where applicable)
 }
 
 const defaultSettings = JSON.parse(JSON.stringify(settings))

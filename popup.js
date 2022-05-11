@@ -28,6 +28,10 @@ new Vue({
       return this.settings.activeTab || 'api'
     },
 
+    subTab() {
+      return this.settings.subTab || 'general'
+    },
+
     api: {
       get() {
         return this.settings?.apis?.find(api => api.name === this.settings.currentApiName)

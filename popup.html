@@ -40,7 +40,6 @@
         <li class="nav-item"
           v-for="tab in [
             { id: 'api', name: 'API' },
-            { id: 'params', name: 'Generation parameters' },
             { id: 'hotkeys', name: 'Hotkeys' },
             { id: 'json', name: 'Import/export' },
           ]"
@@ -59,9 +58,11 @@
         </li>      
       </ul>
       <!-- Flex container for API settings -->
-      <div class="container">
+      <div class="container"
+        v-show="activeTab === 'api'"
+      >
         <div class="row">
-          <div class="col-4" v-if="['api', 'params'].includes(activeTab)">
+          <div class="col-4">
             <div class="list-group"
               @keydown.down.prevent.exact="api = settings.apis[currentApiIndex() + 1] || settings.apis[0]"
               @keydown.up.prevent.exact="api = settings.apis[currentApiIndex() - 1] || settings.apis[settings.apis.length - 1]"
@@ -96,7 +97,7 @@
             </div>
             
           </div>
-          <div class="col-8" v-if="['api', 'params'].includes(activeTab)">
+          <div class="col-auto">
             <!-- 
               API fields are:
               {
@@ -115,9 +116,7 @@
                 resultKey: 'text'               // Where is the result text in the response?
               }
             -->
-            <div
-              v-show="activeTab === 'api'"
-            >
+            <div>
               <!-- API name -->
               <div class="form-group">
                 <label for="api-name">
@@ -152,75 +151,102 @@
                 {{ caption }}
               </button>
 
-              <!-- API endpoint -->
-              <div class="form-group">
-                <label for="api-endpoint">
-                  API endpoint
-                </label>
-                <input
-                  :type="api.censor ? 'password' : 'text'"
-                  class="form-control"
-                  id="api-endpoint"
-                  v-model="api.endpoint"
-                  placeholder="https://..."
-                />
-              </div>
-              <!-- API authorization token -->
-              <div class="form-group">
-                <label for="api-auth">
-                  API authorization token
-                </label>
-                <input
-                  :type="api.censor ? 'password' : 'text'"
-                  class="form-control"
-                  id="api-auth"
-                  v-model="api.auth"
-                  placeholder="Bearer sk-..."
-                />
-              </div>
-              <!-- Whether to hide the above fields -->
-              <div class="form-group">
-                <div class="form-check">
-                  <input
-                    type="checkbox"
-                    class="form-check-input switch"
-                    id="api-censor"
-                    v-model="api.censor"
-                  />
-                  <label for="api-censor">
-                    Hide API fields
-                  </label>
-                </div>
-              </div>
-              <!-- API prompt, suffix, array, result keys -->
-              <div class="form-group"
-                v-for="key in ['prompt', 'suffix', 'array', 'result']"
-              >
-                <label :for="`api-${key}`">
-                  {{ key }} key
-                </label>
-                <input
-                  type="text"
-                  class="form-control"
-                  :id="`api-${key}`"
-                  v-model="api[key+'Key']"
-                  :placeholder="'e.g. ' + {
-                    prompt: 'prompt',
-                    suffix: 'suffix',
-                    array: 'choices',
-                    result: 'text'
-                  }[key]"
-                />
-                <small class="form-text text-muted"
-                  v-if="['suffix', 'array'].includes(key)"
+              <!-- Tabs to switch between general settings & generation parameters -->
+              <ul class="nav nav-tabs mb-4">
+                <li class="nav-item"
+                  v-for="tab in [
+                    { id: 'general', name: 'General' },
+                    { id: 'params', name: 'Generation parameters' },
+                  ]"
+                  :key="tab.id"
                 >
-                  Leave empty if {{ key === 'suffix' ? 'the model doesn\'t support text insertion' : 'the API doesn\'t return an array' }}
-                </small>
-              </div>              
-            </div>   
-            <!-- API parameters -->
+                  <a
+                    :class="{
+                      'nav-link': true,
+                      active: tab.id === subTab,
+                    }"
+                    @click="$set(settings, 'subTab', tab.id)"
+                    href="#"
+                  >
+                    {{ tab.name }}
+                  </a>
+                </li>
+              </ul>
+
+              <!-- General settings -->
+              <div
+                v-show="subTab === 'general'"
+              >
+                <!-- API endpoint -->
+                <div class="form-group">
+                  <label for="api-endpoint">
+                    API endpoint
+                  </label>
+                  <input
+                    :type="api.censor ? 'password' : 'text'"
+                    class="form-control"
+                    id="api-endpoint"
+                    v-model="api.endpoint"
+                    placeholder="https://..."
+                  />
+                </div>
+                <!-- API authorization token -->
+                <div class="form-group">
+                  <label for="api-auth">
+                    API authorization token
+                  </label>
+                  <input
+                    :type="api.censor ? 'password' : 'text'"
+                    class="form-control"
+                    id="api-auth"
+                    v-model="api.auth"
+                    placeholder="Bearer sk-..."
+                  />
+                </div>
+                <!-- Whether to hide the above fields -->
+                <div class="form-group">
+                  <div class="form-check">
+                    <input
+                      type="checkbox"
+                      class="form-check-input switch"
+                      id="api-censor"
+                      v-model="api.censor"
+                    />
+                    <label for="api-censor">
+                      Hide API fields
+                    </label>
+                  </div>
+                </div>
+                <!-- API prompt, suffix, array, result keys -->
+                <div class="form-group"
+                  v-for="key in ['prompt', 'suffix', 'array', 'result']"
+                >
+                  <label :for="`api-${key}`">
+                    {{ key }} key
+                  </label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    :id="`api-${key}`"
+                    v-model="api[key+'Key']"
+                    :placeholder="'e.g. ' + {
+                      prompt: 'prompt',
+                      suffix: 'suffix',
+                      array: 'choices',
+                      result: 'text'
+                    }[key]"
+                  />
+                  <small class="form-text text-muted"
+                    v-if="['suffix', 'array'].includes(key)"
+                  >
+                    Leave empty if {{ key === 'suffix' ? 'the model doesn\'t support text insertion' : 'the API doesn\'t return an array' }}
+                  </small>
+                </div>              
+              </div>   
+            </div>  
+            <!-- Generation parameters -->
             <div
-              v-show="activeTab === 'params'"
+              v-show="subTab === 'params'"
             >
               <!-- Monospace textarea -->
               <textarea
