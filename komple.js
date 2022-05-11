@@ -43,7 +43,7 @@ const autocompleteListener = ( e ) => {
     if ( e.key.match(/^[\[\(\{\s“,]$/) ) {
       autocompleteTimer = setTimeout(
         () => autocomplete(),
-        500),
+        500)
         // console.log('Autocomplete timer started')
     // if a non-hanging character is typed, cancel the autocomplete timer
     } else {
