@@ -15,7 +15,7 @@ new Vue({
   mounted() {
     chrome.storage.sync.get('settings', ({ settings }) => {
       console.log('Settings:', settings)
-      this.settings = settings
+      this.settings = settings || {}
       // If the settings don't have at least one of the keys of defaultSettings, set them to the default
       for ( let key in defaultSettings || {} )
         if ( !this.settings[key] || key == 'apis' && !this.settings[key].length )
