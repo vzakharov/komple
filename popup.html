@@ -112,165 +112,177 @@
               </div>
               
             </div>
-            <div class="col-4">
-              <div>
-                <!-- API name -->
-                <div class="form-group">
-                  <label for="api-name">
-                    API name
-                  </label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    id="api-name"
-                    :value="api.name"
-                    @input="changeApiName($event.target.value)"
-                    placeholder="My API"
-                  />
-                  <small class="form-text text-muted">
-                    Any name you want.
-                  </small>
-                </div>
-
-                <template v-if="api.empty">
-                  <!-- Select a template -->
+            <div class="col-9">
+              <div class="row">
+                <div class="col-12">
+                    <!-- API name -->
                   <div class="form-group">
-                    <select
-                      class="form-select"
-                      id="api-template"
-                      @change="
-                        let template = JSON.parse($event.target.value)
-                        Object.entries(template.settings).forEach(entry => 
-                          $set(api, ...entry)
-                        )
-                        api.empty = false
-                        changeApiName(pickName(`${template.name}`))
-                        console.log(api)
-                      "
-                    >
-                      <option value="" selected>
-                        -- Select a template --
-                      </option>
-                      <option
-                        v-for="template in apiTemplates"
-                        :value="JSON.stringify(template)"
-                      >
-                        {{ template.name }}
-                      </option>
-                    </select>
-                    <!-- Delete -->
-                    <button
-                      class="btn btn-sm mt-2 btn-outline-secondary"
-                      @click="deleteApi({ doNotPrompt: true })"
-                    >
-                      Delete
-                    </button>
+                    <label for="api-name">
+                      API name
+                    </label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="api-name"
+                      :value="api.name"
+                      @input="changeApiName($event.target.value)"
+                      placeholder="My API"
+                    />
+                    <small class="form-text text-muted">
+                      Any name you want.
+                    </small>
                   </div>
-                </template>
-                <template v-else>
-                  <!-- Buttons to delete/clone the API -->
-                  <button
-                    v-for="caption, action in {
-                      deleteApi: 'Delete',
-                      cloneApi: 'Clone',
-                    }"
-                    :class="{
-                      'btn me-1 mb-2 btn-sm': true,
-                      'btn-outline-danger': action === 'deleteApi',
-                      'btn-outline-secondary': action === 'cloneApi',
-                    }"
-                    @click="vm[action]"
-                  >
-                    {{ caption }}
-                  </button>
 
-                  <div>
-                    <!-- API endpoint -->
+                  <template v-if="api.empty">
+                    <!-- Select a template -->
                     <div class="form-group">
-                      <label for="api-endpoint">
-                        API endpoint
-                      </label>
-                      <input
-                        :type="api.censor ? 'password' : 'text'"
-                        class="form-control"
-                        id="api-endpoint"
-                        v-model="api.endpoint"
-                        placeholder="https://..."
-                      />
+                      <select
+                        class="form-select"
+                        id="api-template"
+                        @change="
+                          let template = JSON.parse($event.target.value)
+                          Object.entries(template.settings).forEach(entry => 
+                            $set(api, ...entry)
+                          )
+                          api.empty = false
+                          changeApiName(pickName(`${template.name}`))
+                          console.log(api)
+                        "
+                      >
+                        <option value="" selected>
+                          -- Select a template --
+                        </option>
+                        <option
+                          v-for="template in apiTemplates"
+                          :value="JSON.stringify(template)"
+                        >
+                          {{ template.name }}
+                        </option>
+                      </select>
+                      <!-- Delete -->
+                      <button
+                        class="btn btn-sm mt-2 btn-outline-secondary"
+                        @click="deleteApi({ doNotPrompt: true })"
+                      >
+                        Delete
+                      </button>
                     </div>
-                    <!-- API authorization token -->
-                    <div class="form-group">
-                      <label for="api-auth">
-                        API authorization token
-                      </label>
-                      <input
-                        :type="api.censor ? 'password' : 'text'"
-                        class="form-control"
-                        id="api-auth"
-                        v-model="api.auth"
-                        placeholder="Bearer [your API key]"
-                      />
-                    </div>
-                    <!-- Whether to hide the above fields -->
-                    <div class="form-group">
-                      <div class="form-check">
-                        <input
-                          type="checkbox"
-                          class="form-check-input switch"
-                          id="api-censor"
-                          v-model="api.censor"
-                        />
-                        <label for="api-censor">
-                          Hide API fields
+                  </template>
+                  <template v-if="!api.empty">
+                    <button
+                      v-for="button in [
+                        { action: deleteApi, caption: 'Delete'},
+                        { action: cloneApi, caption: 'Clone' },
+                        { action: () => $set(settings, 'hideAllButBody', !settings.hideAllButBody),
+                          caption: settings.hideAllButBody ? 'Show all settings' : 'Hide all but body',
+                          hide: !allRequiredApiSettingsSet,
+                        },
+                      ]"
+                      :class="{
+                        'btn me-1 mb-2 btn-sm btn-outline-secondary': true,
+                      }"
+                      @click="button.action"
+                      v-show="!button.hide"
+                    >
+                      {{ button.caption }}
+                    </button>
+
+                    <div v-show="!hideAllButBody">
+                      <!-- API endpoint -->
+                      <div class="form-group">
+                        <label for="api-endpoint">
+                          API endpoint
                         </label>
+                        <input
+                          :type="api.censor ? 'password' : 'text'"
+                          class="form-control"
+                          id="api-endpoint"
+                          v-model.lazy="api.endpoint"
+                          placeholder="https://..."
+                        />
+                      </div>
+                      <!-- API authorization token -->
+                      <div class="form-group">
+                        <label for="api-auth">
+                          API authorization token
+                        </label>
+                        <input
+                          :type="api.censor ? 'password' : 'text'"
+                          class="form-control"
+                          id="api-auth"
+                          v-model.lazy="api.auth"
+                          placeholder="Bearer [your API key]"
+                        />
+                      </div>
+                      <!-- Whether to hide the above fields -->
+                      <div class="form-group">
+                        <div class="form-check">
+                          <input
+                            type="checkbox"
+                            class="form-check-input switch"
+                            id="api-censor"
+                            v-model="api.censor"
+                          />
+                          <label for="api-censor">
+                            Hide API fields
+                          </label>
+                        </div>
                       </div>
                     </div>
-                    <!-- API prompt, suffix, array, result keys -->
-                    <div class="form-group"
-                      v-for="key in ['prompt', 'suffix', 'array', 'result']"
-                    >
-                      <label :for="`api-${key}`">
-                        {{ key }} key
-                      </label>
-                      <input
-                        type="text"
-                        class="form-control"
-                        :id="`api-${key}`"
-                        v-model="api[key+'Key']"
-                        :placeholder="'e.g. ' + {
-                          prompt: 'prompt',
-                          suffix: 'suffix',
-                          array: 'choices',
-                          result: 'text'
-                        }[key]"
-                      />
-                      <small class="form-text text-muted"
-                        v-if="['suffix', 'array'].includes(key)"
-                      >
-                        Leave empty if {{ key === 'suffix' ? 'the model doesn\'t support text insertion' : 'the API doesn\'t return an array' }}
-                      </small>
-                    </div>              
-                  </div>   
-                </template> 
-              </div>  
-            </div> 
-            <div class="col-5">
-              <!-- Generation parameters -->
-              <div>
-                <!-- Monospace textarea -->
-                <div class="form-group">
-                  <label for="api-body">
-                    API request body
-                  </label>
-                  <textarea
-                    id="api-body"
-                    class="form-control"
-                    style="font-family: monospace; height: 683px;"
-                    v-model="stringifiedApiParams"
-                    placeholder="{ max_tokens: 50, temperature: 0.6, stop: '\n' }"
-                  ></textarea>
-                </div>  
+                  </template>
+                </div>
               </div>
+              <div class="row"
+                v-if="!api.empty"
+              >
+                <div class="col-5"
+                  v-show="!hideAllButBody"
+                >
+                  <!-- API prompt, suffix, array, result keys -->
+                  <div class="form-group"
+                    v-for="key in ['prompt', 'suffix', 'array', 'result']"
+                  >
+                    <label :for="`api-${key}`">
+                      {{ key }} key
+                    </label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      :id="`api-${key}`"
+                      v-model.lazy="api[key+'Key']"
+                      :placeholder="'e.g. ' + {
+                        prompt: 'prompt',
+                        suffix: 'suffix',
+                        array: 'choices',
+                        result: 'text'
+                      }[key]"
+                    />
+                    <small class="form-text text-muted"
+                      v-if="['suffix', 'array'].includes(key)"
+                    >
+                      Leave empty if {{ key === 'suffix' ? 'the model doesn\'t support text insertion' : 'the API doesn\'t return an array' }}
+                    </small>
+                  </div>              
+                </div>   
+                <div class="col">
+                  <!-- Generation parameters -->
+                  <div>
+                    <!-- Monospace textarea -->
+                    <div class="form-group">
+                      <label for="api-body">
+                        API request body
+                      </label>
+                      <textarea
+                        id="api-body"
+                        class="form-control"
+                        style="font-family: monospace; height: 360px;"
+                        v-model.lazy="stringifiedApiParams"
+                        placeholder="{ max_tokens: 50, temperature: 0.6, stop: '\n' }"
+                      ></textarea>
+                    </div>  
+                  </div>
+                </div>
+              </div>  
             </div>
           </div>    
         </div>

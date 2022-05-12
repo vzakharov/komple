@@ -43,6 +43,21 @@ new Vue({
       return this.settings.subTab || 'general'
     },
 
+    allRequiredApiSettingsSet() {
+      return [ 'endpoint', 'auth', 'promptKey', 'resultKey' ].every(key => this.api[key])
+    },
+
+    hideAllButBody() {
+      // Check if all required api settings are set. If yes, return settings.hideAllButBody
+      if ( 
+        this.settings.hideAllButBody && 
+        this.allRequiredApiSettingsSet
+      )
+        return true
+      else
+        return false
+    },
+
     api: {
       get() {
         console.log('Getting API')
