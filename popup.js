@@ -181,7 +181,7 @@ new Vue({
       let { settings: { apis }, api } = this
       let currentApiIndex = apis.indexOf(api)
       let newApi = JSON.parse(JSON.stringify(api))
-      newApi.name = `${api.name} (copy)`
+      newApi.name = this.pickName(newApi.name)
       for ( let i = 2; this.settings.apis.find(api => api.name === newApi.name); i++ ) {
         newApi.name = `${api.name} (copy ${i})`
       }
