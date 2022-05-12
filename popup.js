@@ -20,6 +20,9 @@ new Vue({
       chrome,
       vm: this,
     })
+    setTimeout(() => {
+      document.getElementById('api-list').focus()
+    }, 0)
   },
 
   computed: {

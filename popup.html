@@ -10,15 +10,16 @@
     <script src="vue.js" defer></script>
     <!-- Inline CSS -->
     <style>
+      #app {
+        width: 800px;
+        zoom: 0.73;
+      }
       .form-group {
         margin-bottom: 0.8em;
       }
       label {
         /* margin-bottom: 0.5em; */
         font-weight: 500;
-      }
-      body {
-        zoom: 0.75;
       }
       kbd {
         font-size: 0.8em;
@@ -34,7 +35,6 @@
     <div 
       id="app"
       class="m-3"
-      style="width: 600px;"
     >
       <ul class="nav nav-tabs mb-4">
         <li class="nav-item"
@@ -58,12 +58,14 @@
         </li>      
       </ul>
       <!-- Flex container for API settings -->
-      <div class="container"
+      <div class="container-fluid"
         v-show="activeTab === 'api'"
       >
         <div class="row">
-          <div class="col-4">
-            <div class="list-group"
+          <div class="col-3">
+            <div 
+              id="api-list"
+              class="list-group"
               @keydown.down.prevent.exact="api = settings.apis[currentApiIndex() + 1] || settings.apis[0]"
               @keydown.up.prevent.exact="api = settings.apis[currentApiIndex() - 1] || settings.apis[settings.apis.length - 1]"
               @keydown.ctrl.down.prevent="nudge(+1)"
@@ -97,7 +99,7 @@
             </div>
             
           </div>
-          <div class="col-auto">
+          <div class="col-4">
             <!-- 
               API fields are:
               {
@@ -151,32 +153,7 @@
                 {{ caption }}
               </button>
 
-              <!-- Tabs to switch between general settings & generation parameters -->
-              <ul class="nav nav-tabs mb-4">
-                <li class="nav-item"
-                  v-for="tab in [
-                    { id: 'general', name: 'General' },
-                    { id: 'params', name: 'Generation parameters' },
-                  ]"
-                  :key="tab.id"
-                >
-                  <a
-                    :class="{
-                      'nav-link': true,
-                      active: tab.id === subTab,
-                    }"
-                    @click="$set(settings, 'subTab', tab.id)"
-                    href="#"
-                  >
-                    {{ tab.name }}
-                  </a>
-                </li>
-              </ul>
-
-              <!-- General settings -->
-              <div
-                v-show="subTab === 'general'"
-              >
+              <div>
                 <!-- API endpoint -->
                 <div class="form-group">
                   <label for="api-endpoint">
@@ -244,19 +221,23 @@
                 </div>              
               </div>   
             </div>  
+          </div> 
+          <div class="col-5">
             <!-- Generation parameters -->
-            <div
-              v-show="subTab === 'params'"
-            >
+            <div>
               <!-- Monospace textarea -->
-              <textarea
-                class="form-control"
-                style="font-family: monospace"
-                rows="10"
-                id="api-params"
-                v-model="stringifiedApiParams"
-                placeholder="{ max_tokens: 50, temperature: 0.6, stop: '\n' }"
-              ></textarea>
+              <div class="form-group">
+                <label for="api-body">
+                  API request body
+                </label>
+                <textarea
+                  id="api-body"
+                  class="form-control"
+                  style="font-family: monospace; height: 683px;"
+                  v-model="stringifiedApiParams"
+                  placeholder="{ max_tokens: 50, temperature: 0.6, stop: '\n' }"
+                ></textarea>
+              </div>  
             </div>
           </div>
         </div>    
