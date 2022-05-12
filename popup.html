@@ -36,288 +36,320 @@
       id="app"
       class="m-3"
     >
-      <ul class="nav nav-tabs mb-4">
-        <li class="nav-item"
-          v-for="tab in [
-            { id: 'api', name: 'API' },
-            { id: 'hotkeys', name: 'Hotkeys' },
-            { id: 'json', name: 'Import/export' },
-          ]"
-          :key="tab.id"
-        >
-          <a 
-            :class="{
-              'nav-link': true,
-              active: tab.id === activeTab,
-            }"
-            @click="$set(settings, 'activeTab', tab.id)"
-            href="#"
-          >
-            {{ tab.name }}
-          </a>
-        </li>      
-      </ul>
-      <!-- Flex container for API settings -->
-      <div class="container-fluid"
-        v-show="activeTab === 'api'"
+      <template
+        v-if="settingsLoaded"
       >
-        <div class="row">
-          <div class="col-3">
-            <div 
-              id="api-list"
-              class="list-group"
-              @keydown.down.prevent.exact="api = settings.apis[currentApiIndex() + 1] || settings.apis[0]"
-              @keydown.up.prevent.exact="api = settings.apis[currentApiIndex() - 1] || settings.apis[settings.apis.length - 1]"
-              @keydown.ctrl.down.prevent="nudge(+1)"
-              @keydown.ctrl.up.prevent="nudge(-1)"
-              tabindex="0"
+        <ul class="nav nav-tabs mb-4">
+          <li class="nav-item"
+            v-for="tab in [
+              { id: 'api', name: 'API' },
+              { id: 'hotkeys', name: 'Hotkeys' },
+              { id: 'json', name: 'Import/export' },
+            ]"
+            :key="tab.id"
+          >
+            <a 
+              :class="{
+                'nav-link': true,
+                active: tab.id === activeTab,
+              }"
+              @click="$set(settings, 'activeTab', tab.id)"
+              href="#"
             >
-              <a class="list-group-item"
-                href="#"
-                v-for="api, index in settings.apis"
-                :key="api.name"
-                :class="{
-                  'list-group-item list-group-item-action': true,
-                  active: api.name === settings.currentApiName,
-                }"
-                @click="vm.api = api"
-                tabindex="-1"
+              {{ tab.name }}
+            </a>
+          </li>
+          <!-- Buy me a beer link -->
+          <li class="nav-item">
+            <a
+              class="nav-link"
+              href="https://vzakharov.github.io/buy-me-a-beer/"
+              target="_blank"
+            >
+              Buy me a 🍺
+            </a>
+          </li>
+        </ul>
+        <!-- Flex container for API settings -->
+        <div class="container-fluid"
+          v-show="activeTab === 'api'"
+        >
+          <div class="row">
+            <div class="col-3">
+              <div 
+                id="api-list"
+                class="list-group"
+                @keydown.down.prevent.exact="api = settings.apis[currentApiIndex() + 1] || settings.apis[0]"
+                @keydown.up.prevent.exact="api = settings.apis[currentApiIndex() - 1] || settings.apis[settings.apis.length - 1]"
+                @keydown.ctrl.down.prevent="nudge(+1)"
+                @keydown.ctrl.up.prevent="nudge(-1)"
+                tabindex="0"
               >
-                {{ api.name }}
-              </a>
-              <!-- Add new -->
-              <a class="list-group-item list-group-item-action"
-                href="#"
-                @click="addApi()"
-              >
-                <em>Add new</em>
-              </a>
-            </div>
-            <!-- Muted text: ctrl+up/down to move items -->
-            <div class="text-light-gray mt-2 small">
-              <kbd>Ctrl</kbd> + <kbd>▲▼</kbd> to reorder
-            </div>
-            
-          </div>
-          <div class="col-4">
-            <!-- 
-              API fields are:
-              {
-                name: 'default',                // Arbitrary name for the API
-                endpoint: 'https://...',        // The endpoint to use for autocompletion
-                auth: 'Bearer ...',             // The authorization token to use for the API. Don't forget to add the Bearer prefix!
-                censor: false,                  // Whether to hide the above fields in the configuration modal
-                promptKey: 'prompt',            // The key to use for the prompt in the API request body
-                suffixKey: 'suffix',            // The key to use for the suffix. Leave empty if the model doesn't support it.
-                otherBodyParams: {              // Other parameters to add to the request body (number of tokens, temperature, etc.)
-                  max_tokens: 50,
-                  temperature: 0.6,
-                  stop: '\n'
-                },
-                arrayKey: 'choices',            // Where is the array of suggestions in the response? Empty if no array is returned.
-                resultKey: 'text'               // Where is the result text in the response?
-              }
-            -->
-            <div>
-              <!-- API name -->
-              <div class="form-group">
-                <label for="api-name">
-                  API name
-                </label>
-                <input
-                  type="text"
-                  class="form-control"
-                  id="api-name"
-                  :value="api.name"
-                  @input="changeApiName($event.target.value)"
-                  placeholder="My API"
-                />
-                <small class="form-text text-muted">
-                  Any name you want.
-                </small>
-              </div>
-
-              <!-- Buttons to delete/clone the API -->
-              <button
-                v-for="caption, action in {
-                  deleteApi: 'Delete',
-                  cloneApi: 'Clone',
-                }"
-                :class="{
-                  'btn me-1 mb-2 btn-sm': true,
-                  'btn-outline-danger': action === 'deleteApi',
-                  'btn-outline-secondary': action === 'cloneApi',
-                }"
-                @click="vm[action]"
-              >
-                {{ caption }}
-              </button>
-
-              <div>
-                <!-- API endpoint -->
-                <div class="form-group">
-                  <label for="api-endpoint">
-                    API endpoint
-                  </label>
-                  <input
-                    :type="api.censor ? 'password' : 'text'"
-                    class="form-control"
-                    id="api-endpoint"
-                    v-model="api.endpoint"
-                    placeholder="https://..."
-                  />
-                </div>
-                <!-- API authorization token -->
-                <div class="form-group">
-                  <label for="api-auth">
-                    API authorization token
-                  </label>
-                  <input
-                    :type="api.censor ? 'password' : 'text'"
-                    class="form-control"
-                    id="api-auth"
-                    v-model="api.auth"
-                    placeholder="Bearer sk-..."
-                  />
-                </div>
-                <!-- Whether to hide the above fields -->
-                <div class="form-group">
-                  <div class="form-check">
-                    <input
-                      type="checkbox"
-                      class="form-check-input switch"
-                      id="api-censor"
-                      v-model="api.censor"
-                    />
-                    <label for="api-censor">
-                      Hide API fields
-                    </label>
-                  </div>
-                </div>
-                <!-- API prompt, suffix, array, result keys -->
-                <div class="form-group"
-                  v-for="key in ['prompt', 'suffix', 'array', 'result']"
+                <a class="list-group-item"
+                  href="#"
+                  v-for="api, index in settings.apis"
+                  :key="api.name"
+                  :class="{
+                    'list-group-item list-group-item-action': true,
+                    active: api.name === settings.currentApiName,
+                  }"
+                  @click="vm.api = api"
+                  tabindex="-1"
                 >
-                  <label :for="`api-${key}`">
-                    {{ key }} key
+                  {{ api.name }}
+                </a>
+                <!-- Add new -->
+                <a class="list-group-item list-group-item-action"
+                  href="#"
+                  @click="addApi()"
+                >
+                  <em>Add new</em>
+                </a>
+              </div>
+              <!-- Muted text: ctrl+up/down to move items -->
+              <div class="text-light-gray mt-2 small">
+                <kbd>Ctrl</kbd> + <kbd>▲▼</kbd> to reorder
+              </div>
+              
+            </div>
+            <div class="col-4">
+              <div>
+                <!-- API name -->
+                <div class="form-group">
+                  <label for="api-name">
+                    API name
                   </label>
                   <input
                     type="text"
                     class="form-control"
-                    :id="`api-${key}`"
-                    v-model="api[key+'Key']"
-                    :placeholder="'e.g. ' + {
-                      prompt: 'prompt',
-                      suffix: 'suffix',
-                      array: 'choices',
-                      result: 'text'
-                    }[key]"
+                    id="api-name"
+                    :value="api.name"
+                    @input="changeApiName($event.target.value)"
+                    placeholder="My API"
                   />
-                  <small class="form-text text-muted"
-                    v-if="['suffix', 'array'].includes(key)"
-                  >
-                    Leave empty if {{ key === 'suffix' ? 'the model doesn\'t support text insertion' : 'the API doesn\'t return an array' }}
+                  <small class="form-text text-muted">
+                    Any name you want.
                   </small>
-                </div>              
-              </div>   
-            </div>  
-          </div> 
-          <div class="col-5">
-            <!-- Generation parameters -->
-            <div>
-              <!-- Monospace textarea -->
-              <div class="form-group">
-                <label for="api-body">
-                  API request body
-                </label>
-                <textarea
-                  id="api-body"
-                  class="form-control"
-                  style="font-family: monospace; height: 683px;"
-                  v-model="stringifiedApiParams"
-                  placeholder="{ max_tokens: 50, temperature: 0.6, stop: '\n' }"
-                ></textarea>
+                </div>
+
+                <template v-if="api.empty">
+                  <!-- Select a template -->
+                  <div class="form-group">
+                    <select
+                      class="form-select"
+                      id="api-template"
+                      @change="
+                        let template = JSON.parse($event.target.value)
+                        Object.entries(template.settings).forEach(entry => 
+                          $set(api, ...entry)
+                        )
+                        api.empty = false
+                        changeApiName(pickName(`${template.name}`))
+                        console.log(api)
+                      "
+                    >
+                      <option value="" selected>
+                        -- Select a template --
+                      </option>
+                      <option
+                        v-for="template in apiTemplates"
+                        :value="JSON.stringify(template)"
+                      >
+                        {{ template.name }}
+                      </option>
+                    </select>
+                    <!-- Delete -->
+                    <button
+                      class="btn btn-sm mt-2 btn-outline-secondary"
+                      @click="deleteApi({ doNotPrompt: true })"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </template>
+                <template v-else>
+                  <!-- Buttons to delete/clone the API -->
+                  <button
+                    v-for="caption, action in {
+                      deleteApi: 'Delete',
+                      cloneApi: 'Clone',
+                    }"
+                    :class="{
+                      'btn me-1 mb-2 btn-sm': true,
+                      'btn-outline-danger': action === 'deleteApi',
+                      'btn-outline-secondary': action === 'cloneApi',
+                    }"
+                    @click="vm[action]"
+                  >
+                    {{ caption }}
+                  </button>
+
+                  <div>
+                    <!-- API endpoint -->
+                    <div class="form-group">
+                      <label for="api-endpoint">
+                        API endpoint
+                      </label>
+                      <input
+                        :type="api.censor ? 'password' : 'text'"
+                        class="form-control"
+                        id="api-endpoint"
+                        v-model="api.endpoint"
+                        placeholder="https://..."
+                      />
+                    </div>
+                    <!-- API authorization token -->
+                    <div class="form-group">
+                      <label for="api-auth">
+                        API authorization token
+                      </label>
+                      <input
+                        :type="api.censor ? 'password' : 'text'"
+                        class="form-control"
+                        id="api-auth"
+                        v-model="api.auth"
+                        placeholder="Bearer [your API key]"
+                      />
+                    </div>
+                    <!-- Whether to hide the above fields -->
+                    <div class="form-group">
+                      <div class="form-check">
+                        <input
+                          type="checkbox"
+                          class="form-check-input switch"
+                          id="api-censor"
+                          v-model="api.censor"
+                        />
+                        <label for="api-censor">
+                          Hide API fields
+                        </label>
+                      </div>
+                    </div>
+                    <!-- API prompt, suffix, array, result keys -->
+                    <div class="form-group"
+                      v-for="key in ['prompt', 'suffix', 'array', 'result']"
+                    >
+                      <label :for="`api-${key}`">
+                        {{ key }} key
+                      </label>
+                      <input
+                        type="text"
+                        class="form-control"
+                        :id="`api-${key}`"
+                        v-model="api[key+'Key']"
+                        :placeholder="'e.g. ' + {
+                          prompt: 'prompt',
+                          suffix: 'suffix',
+                          array: 'choices',
+                          result: 'text'
+                        }[key]"
+                      />
+                      <small class="form-text text-muted"
+                        v-if="['suffix', 'array'].includes(key)"
+                      >
+                        Leave empty if {{ key === 'suffix' ? 'the model doesn\'t support text insertion' : 'the API doesn\'t return an array' }}
+                      </small>
+                    </div>              
+                  </div>   
+                </template> 
               </div>  
+            </div> 
+            <div class="col-5">
+              <!-- Generation parameters -->
+              <div>
+                <!-- Monospace textarea -->
+                <div class="form-group">
+                  <label for="api-body">
+                    API request body
+                  </label>
+                  <textarea
+                    id="api-body"
+                    class="form-control"
+                    style="font-family: monospace; height: 683px;"
+                    v-model="stringifiedApiParams"
+                    placeholder="{ max_tokens: 50, temperature: 0.6, stop: '\n' }"
+                  ></textarea>
+                </div>  
+              </div>
             </div>
-          </div>
-        </div>    
-      </div>
-      <!-- Hotkeys section -->
-      <div
-        v-show="activeTab === 'hotkeys'"
-      >
-        <!-- Table: action (with description), modifier, key -->
-        <table class="table table-sm">
-          <thead>
-            <tr
-              class="thead-dark"
-            >
-              <th scope="col">Action</th>
-              <th scope="col">Hotkey</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="hotkey, action in settings.hotkeys"
-              :key="action"
-            >
-              <td v-text="{
-                autocomplete: 'Autocomplete',
-                apiPicker: 'Pick API',
-              }[action]"/>
-              <td>
-                <!-- An input that listens to keydown events -->
-                <input
-                  type="text"
-                  class="form-control"
-                  :value="`${hotkey.modifier}+${hotkey.key === ' ' ? 'Space' : hotkey.key}`"
-                  readonly
-                  @keydown="
-                    // If it's a tab or a shift, don't do anything
-                    if (['Tab', 'Shift'].includes($event.key))
-                      return
-
-                    // If the key is a modifier, set the modifier and clear the key
-                    if ( ['Control', 'Shift', 'Alt', 'Meta'].includes($event.key) ) {
-                      hotkey.modifier = $event.key
-                      hotkey.key = ''
-                    } else {
-                      hotkey.key = $event.key
-                    }
-
-                    // Prevent the default action
-                    $event.preventDefault()
-                  "
-                  @keyup.prevent="
-                    // If no key is set, clear the modifier too
-                    if ( !hotkey.key ) {
-                      hotkey.modifier = ''
-                    }
-                  "
-                  @keypress.prevent
-                />
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <!-- Switch to activate on a hanging character -->
-        <div class="form-check form-switch">
-          <input
-            type="checkbox"
-            class="form-check-input"
-            id="activate-on-hanging-char"
-            v-model="settings.activateOnHangingChar"
-          />
-          <label for="activate-on-hanging-char">
-            Activate on a hanging character
-          </label>
-          <p class="form-text text-muted small">
-            If checked, the autocomplete will be activated on a hanging character like space, comma, etc. WARNING: This can cause your tokens to deplete quickly.
-          </p>
+          </div>    
         </div>
-      </div>
-      <!-- JSON section -->
-      <div
+        <!-- Hotkeys section -->
+        <div
+          v-show="activeTab === 'hotkeys'"
+        >
+          <!-- Table: action (with description), modifier, key -->
+          <table class="table table-sm">
+            <thead>
+              <tr
+                class="thead-dark"
+              >
+                <th scope="col">Action</th>
+                <th scope="col">Hotkey</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="hotkey, action in settings.hotkeys"
+                :key="action"
+              >
+                <td v-text="{
+                  autocomplete: 'Autocomplete',
+                  apiPicker: 'Pick API',
+                }[action]"/>
+                <td>
+                  <!-- An input that listens to keydown events -->
+                  <input
+                    type="text"
+                    class="form-control"
+                    :value="`${hotkey.modifier}+${hotkey.key === ' ' ? 'Space' : hotkey.key}`"
+                    readonly
+                    @keydown="
+                      // If it's a tab or a shift, don't do anything
+                      if (['Tab', 'Shift'].includes($event.key))
+                        return
+
+                      // If the key is a modifier, set the modifier and clear the key
+                      if ( ['Control', 'Shift', 'Alt', 'Meta'].includes($event.key) ) {
+                        hotkey.modifier = $event.key
+                        hotkey.key = ''
+                      } else {
+                        hotkey.key = $event.key
+                      }
+
+                      // Prevent the default action
+                      $event.preventDefault()
+                    "
+                    @keyup.prevent="
+                      // If no key is set, clear the modifier too
+                      if ( !hotkey.key ) {
+                        hotkey.modifier = ''
+                      }
+                    "
+                    @keypress.prevent
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <!-- Switch to activate on a hanging character -->
+          <div class="form-check form-switch">
+            <input
+              type="checkbox"
+              class="form-check-input"
+              id="activate-on-hanging-char"
+              v-model="settings.activateOnHangingChar"
+            />
+            <label for="activate-on-hanging-char">
+              Activate on a hanging character
+            </label>
+            <p class="form-text text-muted small">
+              If checked, the autocomplete will be activated on a hanging character like space, comma, etc. WARNING: This can cause your tokens to deplete quickly.
+            </p>
+          </div>
+        </div>
+        <!-- JSON section -->
+        <div
         v-show="activeTab === 'json'"
       >
         <!-- A textarea with all the settings as JSON -->
@@ -346,11 +378,12 @@
             Download: downloadSettings,
             Reset: resetSettings,
           }"
-          :key="action"
+          :key="caption"
           @click="action"
           v-text="caption"
           :variant="action === 'Download' ? 'outline-secondary' : 'outline-danger'"
         />
+      </template>
     </div>
     <script src="settings.js" defer></script>
     <script src="popup.js" defer></script>

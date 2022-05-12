@@ -577,7 +577,8 @@ async function simulateTextInput(text) {
   while ( lines.length ) {
     document.execCommand('insertText', false, lines.shift())
     if ( lines.length )
-      document.execCommand('insertParagraph', false, '')
+      // document.insertHTML('<br/>')
+      document.insertText(' / ')
   }
 
 }

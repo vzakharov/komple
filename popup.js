@@ -6,15 +6,23 @@ new Vue({
       settings: {},
       vm: this,
       window,
-      console
+      console,
+      apiTemplates,
+      settingsLoaded: false,
     }
   },
 
   mounted() {
     chrome.storage.sync.get('settings', ({ settings }) => {
       console.log('Settings:', settings)
-      this.settings = settings || defaultSettings
+      this.settings = settings
+      // If the settings don't have at least one of the keys of defaultSettings, set them to the default
+      for ( let key in defaultSettings || {} )
+        if ( !this.settings[key] || key == 'apis' && !this.settings[key].length )
+          this.$set(this.settings, key, defaultSettings[key])
+
       window.settings = this.settings
+      this.settingsLoaded = true
     })
     Object.assign(window, {
       chrome,
@@ -37,7 +45,9 @@ new Vue({
 
     api: {
       get() {
-        return this.settings?.apis?.find(api => api.name === this.settings.currentApiName)
+        console.log('Getting API')
+        console.log(this.settings)
+        return this.settings?.apis?.find(api => api.name === this.settings.currentApiName) || this.settings.apis?.[0]
       },
       set(api) {
         this.settings.currentApiName = api.name
@@ -61,9 +71,6 @@ new Vue({
       }
     },
 
-    isMac() {
-      return navigator.platform.includes('Mac')
-    }
   },
 
   watch: {
@@ -108,19 +115,24 @@ new Vue({
       }
     },
 
+    pickName(baseName) {
+      // If there's already an API with that name, add a number to the name until there's no conflict
+      let name = baseName
+      for ( let i = 2; this.settings.apis.find(api => api.name === name); i++ ) {
+        name = `${baseName} (${i})`
+      }
+      return name
+    },
+
     addApi() {
       // Add a new API to the list
-      let newApiName = 'New API'
-
-      // If there's already an API with that name, add a number to the name until there's no conflict
-      for ( let i = 2; this.settings.apis.find(api => api.name === newApiName); i++ ) {
-        newApiName = `New API (${i})`
-      }
+      let newApiName = this.pickName('New API')
 
       this.settings.apis = [...this.settings.apis,
         {
           ...JSON.parse(JSON.stringify(defaultApi)),
-          name: newApiName
+          name: newApiName,
+          empty: true,
         }
       ]
 
@@ -128,14 +140,17 @@ new Vue({
 
     },
 
-    deleteApi() {
-      // Prompt first
-      if ( !confirm(`Are you sure you want to delete the API "${this.api.name}"? There is no undo!`) )
+    deleteApi({ doNotPrompt } = {}) {
+      // Prompt first if doNotPrompt is not set
+      if ( !doNotPrompt && !confirm(`Are you sure you want to delete the API "${this.api.name}"? There is no undo!`) )
         return
       // Delete the current API
       let { settings: { apis }, api } = this
       let currentApiIndex = apis.indexOf(api)
       apis.splice(currentApiIndex, 1)
+      // If none left, create a new one
+      if ( apis.length === 0 )
+        this.addApi()
       this.api = apis[currentApiIndex - 1] || apis[0]
     },
 
