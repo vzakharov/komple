@@ -194,7 +194,7 @@
                           API endpoint
                         </label>
                         <input
-                          :type="api.censor ? 'password' : 'text'"
+                          :type="settings.censor ? 'password' : 'text'"
                           class="form-control"
                           id="api-endpoint"
                           v-model.lazy="api.endpoint"
@@ -207,7 +207,7 @@
                           API authorization header
                         </label>
                         <input
-                          :type="api.censor ? 'password' : 'text'"
+                          :type="settings.censor ? 'password' : 'text'"
                           class="form-control"
                           id="api-auth"
                           v-model.lazy="api.auth"
@@ -221,7 +221,7 @@
                             type="checkbox"
                             class="form-check-input switch"
                             id="api-censor"
-                            v-model="api.censor"
+                            v-model="settings.censor"
                           />
                           <label for="api-censor">
                             Hide API fields
