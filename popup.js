@@ -104,7 +104,14 @@ new Vue({
       deep: true,
     },
 
-
+    'api.auth'(auth) {
+      // If auth doesn't start with a "Bearer" or "Basic" or "JWT", add it after confirming
+      if ( 
+        auth && !auth.match(/^(Bearer|Basic|JWT) /) &&
+        confirm(`Seems like you entered just the API key, not the entire auth header.\n\nDo you want to set to 'Bearer ${auth}'?`)
+      )
+        this.api.auth = `Bearer ${auth}`
+    }
   },
 
   methods: {
