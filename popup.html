@@ -369,6 +369,10 @@
         <div
         v-show="activeTab === 'json'"
       >
+        <!-- Warning that changing the JSON might break the app -->
+        <p class="form-text text-danger">
+          <strong>WARNING:</strong> This is an advanced feature. Changing the JSON might break the settings, in which case they will be reset to their default values.
+        </p>
         <!-- A textarea with all the settings as JSON -->
         <textarea
           class="form-control"
