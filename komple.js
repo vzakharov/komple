@@ -31,6 +31,13 @@ const clearModifierListener = ['keyup', e => {
   }
 }]
 
+// Clear modifier if the user navigates away from the tab
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    modifierPressed = null
+  }
+})
+
 const autocompleteListener = ( e ) => {
   // if the hotkey is pressed, autocomplete
   if ( e.key == settings.hotkeys.autocomplete.key && settings.hotkeys.autocomplete.modifier && modifierPressed === settings.hotkeys.autocomplete.modifier ) {
@@ -570,16 +577,16 @@ function setCaretPosition(element, position) {
 
 async function simulateTextInput(text) {
 
-  // document.execCommand('insertText', false, text)
-  // Split by newlines, exec insertText for each line, plus insertParagraph between each
-  let lines = text.split(/\n+/)
-  // console.log('Lines:', lines)
-  while ( lines.length ) {
-    document.execCommand('insertText', false, lines.shift())
-    if ( lines.length )
-      // document.insertHTML('<br/>')
-      document.insertText(' / ')
-  }
+  document.execCommand('insertText', false, text.replace(/\n+/g, ' '))
+  // // Split by newlines, exec insertText for each line, plus insertParagraph between each
+  // let lines = text.split(/\n+/)
+  // // console.log('Lines:', lines)
+  // while ( lines.length ) {
+  //   document.execCommand('insertText', false, lines.shift())
+  //   if ( lines.length )
+  //     // document.insertHTML('<br/>')
+  //     document.insertText(' / ')
+  // }
 
 }
 
