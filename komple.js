@@ -485,14 +485,15 @@ function getPrompt(element = getCurrentElement()) {
     return text
   }
 
-  prompt = process(prompt)
-  suffix = process(suffix)
-
   // Remove everything in the prompt before and including '//start'
   prompt = prompt.split('\n//start').pop()
 
   // Remove everything in the suffix after and including '//stop'
   if ( suffix) suffix = suffix.split('\n//stop').shift()
+
+  prompt = process(prompt)
+  suffix = process(suffix)
+
 
   console.log('Prompt:', prompt)
   console.log('Suffix:', suffix)
