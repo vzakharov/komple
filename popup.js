@@ -29,13 +29,14 @@ new Vue({
       vm: this,
     })
     setTimeout(() => {
-      document.getElementById('api-list').focus()
+      document.getElementById('api-list')?.focus()
     }, 0)
   },
 
   computed: {
 
     activeTab() {
+      // window.alert(`activeTab: ${this.settings.activeTab}`)
       return this.settings.activeTab || 'api'
     },
 

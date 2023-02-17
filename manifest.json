@@ -16,6 +16,7 @@
           "https://*/*"
           ],
       "js": [
+        "encoder.js", "vocab.bpe.js", "mod.js",
         "lodashish.js", "settings.js", "scrape.js", "ui.js", "komple.js"
       ],
       "run_at": "document_end"

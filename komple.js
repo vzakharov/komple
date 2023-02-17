@@ -298,6 +298,7 @@ async function autocomplete() {
   if ( element ) {
 
     let { prompt, feeder, suffix } = getPrompt(element)
+    prompt ||= ''
     
     try {
       startThinking( suffix ? 'Inserting' : 'Completing' )
@@ -311,8 +312,8 @@ async function autocomplete() {
         // // Remove any leading and trailing newlines
         // completion = completion.replace(/^\n+/, '').replace(/\n+$/, '')
         // 
-        // // Replace any newlines (in any quantity) with a space
-        // completion = completion.replace(/\n+/g, ' ')
+        // Replace any newlines (in any quantity) with a space, if settings.removeNewlines is true
+        completion = completion.replace(/\n+/g, settings.removeNewlines ? ' ' : '\n')
         // 
         // // Remove everything after and including the first newline
         // completion = completion.replace(/\n.*/g, '')
@@ -477,8 +478,12 @@ function getPrompt(element = getCurrentElement()) {
 
   process = text => {  
     if (!text) return
-    // Remove all {{...}} bits
-    text = text.replace(/\{\{[\s\S]+?\}\}/g, '')
+    // Remove all {{...}} bits, unless the {{ is directly followed by "...". In that case, keep the ... bit.
+    text = text.replace(/\{\{(\.\.\.)?[\s\S]*?\}\}/g, "$1")
+    // Remove all bits within "/*-...*/"
+    text = text.replace(/\/\*-[\s\S]+?\*\//g, '')
+    // For all bits formatted as "/*!...*/", remove the enclosing "/*!" and "*/" and trim the inner text
+    text = text.replace(/\/\*!\s*([\s\S]+?)\s*\*\//g, '$1')
     // Replace any number of newlines with 2
     text = text.replace(/\n+/g, '\n\n')
     text = text.trimRight()
@@ -578,7 +583,7 @@ function setCaretPosition(element, position) {
 
 async function simulateTextInput(text) {
 
-  document.execCommand('insertText', false, text.replace(/\n+/g, ' '))
+  document.execCommand('insertText', false, text)
   // // Split by newlines, exec insertText for each line, plus insertParagraph between each
   // let lines = text.split(/\n+/)
   // // console.log('Lines:', lines)
@@ -590,8 +595,9 @@ async function simulateTextInput(text) {
   // }
 
 }
+let tokensByEndpoint = {}
 
-async function getSuggestion(text, { suffix }) {
+async function getSuggestion(prompt, { suffix }) {
 
     let {
       endpoint, auth, promptKey, otherBodyParams, arrayKey, resultKey, suffixKey
@@ -609,7 +615,7 @@ async function getSuggestion(text, { suffix }) {
             'Authorization': `${auth}`
           },
           body: JSON.stringify({
-            [promptKey]: text,
+            [promptKey]: prompt,
             ...( suffixKey && suffix ) ? { [suffixKey]: suffix } : {},
             ...otherBodyParams
           })
@@ -617,10 +623,24 @@ async function getSuggestion(text, { suffix }) {
       )
     ).json()
 
-    // return arrayKey ? 
-    //   json[arrayKey][0][resultKey] 
-    //   : json[resultKey]
-    return get(arrayKey ? json[arrayKey][0] : json, resultKey)
+    let completion = get(arrayKey ? json[arrayKey][0] : json, resultKey)
+
+    // Log token stats via encode(...).length
+    console.log('Token stats:')
+    console.log('Prompt:', encode(prompt).length)
+    suffix && console.log('Suffix:', encode(suffix).length)
+    console.log('Completion:', encode(completion).length)
+    
+    let totalTokens = [prompt, suffix, completion].map(encode).map(s => s.length).reduce((a, b) => a + b)
+
+    console.log('Total tokens:', totalTokens)
+
+    tokensByEndpoint[endpoint] = ( tokensByEndpoint[endpoint] || 0 ) + totalTokens
+
+    console.log('Tokens by endpoint:', tokensByEndpoint)
+
+    return completion
+
 }
 
 function saveSettings() {

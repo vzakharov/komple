@@ -6,7 +6,7 @@
     <title>Komple settings</title>
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
-    <!-- Petite vue -->
+    <!-- Vue -->
     <script src="vue.js" defer></script>
     <!-- Inline CSS -->
     <style>
@@ -44,6 +44,7 @@
             v-for="tab in [
               { id: 'api', name: 'API' },
               { id: 'hotkeys', name: 'Hotkeys' },
+              { id: 'advanced', name: 'Advanced' },
               { id: 'json', name: 'Import/export' },
             ]"
             :key="tab.id"
@@ -365,45 +366,66 @@
             </p>
           </div>
         </div>
+        <!-- Advanced section -->
+        <div
+          v-show="activeTab === 'advanced'"
+        >
+          <!-- Switch to remove new lines from output -->
+          <div class="form-check form-switch">
+            <input
+              type="checkbox"
+              class="form-check-input"
+              id="remove-newlines"
+              v-model="settings.removeNewlines"
+            />
+            <label for="remove-newlines">
+              Remove newlines from output
+            </label>
+            <p class="form-text text-muted small">
+              If checked, newlines will be removed from the output. This can be useful for websites that handle newlines differently (e.g. Twitter)
+            </p>
+          </div>
+        </div>
         <!-- JSON section -->
         <div
-        v-show="activeTab === 'json'"
-      >
-        <!-- Warning that changing the JSON might break the app -->
-        <p class="form-text text-danger">
-          <strong>WARNING:</strong> This is an advanced feature. Changing the JSON might break the settings, in which case they will be reset to their default values.
-        </p>
-        <!-- A textarea with all the settings as JSON -->
-        <textarea
-          class="form-control"
-          style="font-family: monospace"
-          rows="25"
-          id="json"
-          :value="JSON.stringify(settings, null, 2)"
-          @change="
-            try {
-              settings = JSON.parse($event.target.value)
-            } catch (e) {
-              console.error(e)
-              $bvToast.toast('Invalid JSON', {
-                title: 'Error',
-                variant: 'danger',
-              })
-            }
-          "
-        ></textarea>
-        <!-- Download & reset buttons -->
-        <button
-          class="btn btn-outline-secondary me-2 mt-2"
-          v-for="action, caption in {
-            Download: downloadSettings,
-            Reset: resetSettings,
-          }"
-          :key="caption"
-          @click="action"
-          v-text="caption"
-          :variant="action === 'Download' ? 'outline-secondary' : 'outline-danger'"
-        />
+          v-show="activeTab === 'json'"
+        >
+          <!-- Warning that changing the JSON might break the app -->
+          <p class="form-text text-danger">
+            <strong>WARNING:</strong> This is an advanced feature. Changing the JSON might break the settings, in which case they will be reset to their default values.
+          </p>
+          <!-- A textarea with all the settings as JSON -->
+          <textarea
+            class="form-control"
+            style="font-family: monospace"
+            rows="25"
+            id="json"
+            :value="JSON.stringify(settings, null, 2)"
+            @change="
+              try {
+                settings = JSON.parse($event.target.value)
+              } catch (e) {
+                console.error(e)
+                $bvToast.toast('Invalid JSON', {
+                  title: 'Error',
+                  variant: 'danger',
+                })
+              }
+            "
+          ></textarea>
+          <!-- Download & reset buttons -->
+          <button
+            class="btn btn-outline-secondary me-2 mt-2"
+            v-for="action, caption in {
+              Download: downloadSettings,
+              Reset: resetSettings,
+            }"
+            :key="caption"
+            @click="action"
+            v-text="caption"
+            :variant="action === 'Download' ? 'outline-secondary' : 'outline-danger'"
+          />
+        </div>
       </template>
     </div>
     <script src="settings.js" defer></script>

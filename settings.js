@@ -45,6 +45,7 @@ const settings = {
 
   activeTab: 'api',                   // The tab to show when opening the extension popup
   subTab: 'general',                  // The subtab to show when opening the extension popup (where applicable)
+  removeNewlines: false,              // If true, newlines will be removed from the result text
 }
 
 const defaultSettings = JSON.parse(JSON.stringify(settings))
@@ -92,4 +93,3 @@ const apiTemplates = [
 Object.defineProperty(settings, 'api', {
   get: () => settings.apis.find(api => api.name === settings.currentApiName) || settings.apis[0]
 })
-
